@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redline Selection | Inventario Premium</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="top-bar">
+            <div class="container top-bar-content">
+                <span>Santiago, República Dominicana</span>
+                <span>Horario: Lunes a Viernes 9am - 6pm</span>
+            </div>
+        </div>
+        <div class="main-header">
+            <div class="container header-content">
+                <div class="logo">
+                    <h1 class="logo-text">REDLINE <span>SELECTION</span></h1>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#" class="active">INICIO</a></li>
+                        <li><a href="#">INVENTARIO</a></li>
+                        <li><a href="#">FINANCIAMIENTO</a></li>
+                        <li><a href="#">CONTACTO</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <p class="hero-subtext">TENEMOS TODO LO QUE</p>
+            <h1 class="hero-title">¡TU AUTO NECESITA!</h1>
+        </div>
+    </section>
+
+    <main class="container main-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>BUSCA TU AUTO</h2>
+            </div>
+
+            <div class="filter-content">
+                <div class="filter-section active">
+                    <div class="filter-title">
+                        <span>Buscar por Marca</span>
+                        <span class="icon">-</span>
+                    </div>
+                    <ul class="brand-list scrollable">
+                        <li><input type="checkbox"> Toyota (12)</li>
+                        <li><input type="checkbox"> Honda (8)</li>
+                        <li><input type="checkbox"> BMW (5)</li>
+                        <li><input type="checkbox"> Lexus (3)</li>
+                        <li><input type="checkbox"> Kia (4)</li>
+                    </ul>
+                </div>
+                </div>
+
+            <button class="btn-sidebar-search">BUSCAR VEHÍCULO</button>
+        </aside>
+
+        <section class="listings">
+            <div class="grid">
+                <div class="car-card" onclick="abrirModal('Toyota Camry XSE', 'RD$ 2,450,000', '2022', 'Sedán', 'Automática', '12,400 km', 'Usado', 'Gasolina')">
+                    <div class="image-container">
+                        <img src="https://i.pinimg.com/1200x/b7/a6/6a/b7a66a70579e63130ccf291d7912e73b.jpg" alt="Toyota Camry">
+                    </div>
+                    <div class="car-info">
+                        <h4>Toyota Camry XSE</h4>
+                        <span class="price">RD$ 2,450,000</span>
+                        <div class="specs">
+                            <span>2022</span>
+                            <span>Automático</span>
+                            <span>Gasolina</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card" onclick="abrirModal('Honda Civic Type R', 'RD$ 3,100,000', '2023', 'Hatchback', 'Manual', '0 km', 'Nuevo', 'Turbo Gasolina')">
+                    <div class="image-container">
+                        <img src="https://i.pinimg.com/1200x/79/14/01/79140147729a5d70243ff1c3a80fa4d7.jpg" alt="Honda Civic">
+                    </div>
+                    <div class="car-info">
+                        <h4>Honda Civic Type R</h4>
+                        <span class="price">RD$ 3,100,000</span>
+                        <div class="specs">
+                            <span>2023</span>
+                            <span>Manual</span>
+                            <span>Turbo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card" onclick="abrirModal('Toyota RAV4 XLE', 'RD$ 2,800,000', '2021', 'SUV', 'Automática', '30,000 km', 'Usado', 'Híbrido')">
+                    <div class="image-container">
+                        <img src="https://tse2.mm.bing.net/th/id/OIP.CHqsovT1GCfC2wUUpvJUvwHaEF?rs=1&pid=ImgDetMain" alt="Toyota RAV4">
+                    </div>
+                    <div class="car-info">
+                        <h4>Toyota RAV4 XLE</h4>
+                        <span class="price">RD$ 2,800,000</span>
+                        <div class="specs">
+                            <span>2021</span>
+                            <span>Automático</span>
+                            <span>Híbrido</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card" onclick="abrirModal('Toyota Corolla SE', 'RD$ 1,900,000', '2020', 'Sedán', 'Automática', '45,000 km', 'Usado', 'Gasolina')">
+                    <div class="image-container"> 
+                        <img src="https://http2.mlstatic.com/D_NQ_NP_623294-MLV109283016813_032026-O.webp" alt="Toyota Corolla">
+                    </div>
+                    <div class="car-info">
+                        <h4>Toyota Corolla SE</h4>
+                        <span class="price">RD$ 1,900,000</span>
+                        <div class="specs">
+                            <span>2020</span>
+                            <span>Automático</span>
+                            <span>Gasolina</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card" onclick="abrirModal('Honda CR-V EXL', 'RD$ 2,750,000', '2022', 'SUV', 'Automática', '15,000 km', 'Seminuevo', 'Híbrido')">
+                    <div class="image-container"> 
+                        <img src="https://automobiles.honda.com/-/media/Honda-Automobiles/Vehicles/2026/CR-V/AW/Carshot/carshot_CR-V_front_CR-VHYB2WDSPORTL_2026_RadiantRedMetallic_RS5H8TJFW_R-569M.png" alt="Honda CRV">
+                    </div>
+                    <div class="car-info">
+                        <h4>Honda CR-V EXL</h4>
+                        <span class="price">RD$ 2,750,000</span>
+                        <div class="specs">
+                            <span>2022</span>
+                            <span>Automático</span>
+                            <span>Híbrido</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="car-card" onclick="abrirModal('Honda Accord EX-L', 'RD$ 1,475,000', '2024', 'Sedán', 'Automática', '5,000 km', 'Nuevo', 'Gasolina')">
+                    <div class="image-container"> 
+                        <img src="https://vehicle-images.dealerinspire.com/e974-110005806/1HGCY2F8XSA014047/5eb2a784186206ad2ee98e4c2cf3442e.jpg" alt="Honda Accord">
+                    </div>
+                    <div class="car-info">
+                        <h4>Honda Accord EX-L</h4>
+                        <span class="price">RD$ 1,475,000</span>
+                        <div class="specs">
+                            <span>2024</span>
+                            <span>Automático</span>
+                            <span>Gasolina</span>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+        </section>
+    </main>
+
+    <div id="modalVehiculo" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarModal()">&times;</span>
+            <div class="modal-body">
+                <h2 id="m-titulo"></h2>
+                <h3 id="m-precio"></h3>
+                <div class="modal-details-grid">
+                    <div class="detail-item"><strong>Año:</strong> <span id="m-ano"></span></div>
+                    <div class="detail-item"><strong>Carrocería:</strong> <span id="m-carroceria"></span></div>
+                    <div class="detail-item"><strong>Transmisión:</strong> <span id="m-transmision"></span></div>
+                    <div class="detail-item"><strong>Millaje:</strong> <span id="m-millaje"></span></div>
+                    <div class="detail-item"><strong>Condición:</strong> <span id="m-condicion"></span></div>
+                    <div class="detail-item"><strong>Combustible:</strong> <span id="m-combustible"></span></div>
+                </div>
+                <button class="btn-sidebar-search" style="margin: 30px 0 0 0; width: 100%;">CONTACTAR ASESOR</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container footer-grid">
+            <div class="footer-about">
+                <h3 class="logo-text">REDLINE <span>SELECTION</span></h3>
+                <p>Expertos en vehículos de alta gama en Santiago.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Soporte</h4>
+                <p>Email: <a href="mailto:info@redlineselection.com">info@redlineselection.com</a></p>
+                <p>Teléfono: (809) 767-3993</p>
+                <p>Dirección: Av. 27 de Febrero #123, Santiago</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Redline Selection. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="index.js"></script>
+    <div id="modalVehiculo" class="modal-overlay">
+    <div class="modal-content">
+        <span class="close-btn" onclick="cerrarModal()">&times;</span>
+        <div class="modal-body">
+            <h2 id="m-titulo"></h2>
+            <h3 id="m-precio"></h3>
+            <div class="modal-details-grid">
+                <div class="detail-item"><strong>Año:</strong> <span id="m-ano"></span></div>
+                <div class="detail-item"><strong>Carrocería:</strong> <span id="m-carroceria"></span></div>
+                <div class="detail-item"><strong>Transmisión:</strong> <span id="m-transmision"></span></div>
+                <div class="detail-item"><strong>Millaje:</strong> <span id="m-millaje"></span></div>
+                <div class="detail-item"><strong>Condición:</strong> <span id="m-condicion"></span></div>
+                <div class="detail-item"><strong>Combustible:</strong> <span id="m-combustible"></span></div>
+            </div>
+            <button class="btn-sidebar-search" style="margin: 30px 0 0 0; width: 100%;">CONTACTAR ASESOR</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
