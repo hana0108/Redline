@@ -34,3 +34,30 @@ window.onclick = function(event) {
         cerrarModal();
     }
 }
+
+// Funcion de la busqueda y filtrado 
+document.addEventListener('DOMContentLoaded', () => {
+    const btnBuscar = document.querySelector('.btn-sidebar-search');
+    
+    btnBuscar.addEventListener('click', () => {
+        const checkboxesMarcados = document.querySelectorAll('.brand-list input[type="checkbox"]:checked');
+        const marcasSeleccionadas = Array.from(checkboxesMarcados).map(checkbox => {
+            const marca = checkbox.value || checkbox.parentElement.textContent.trim().split(' ')[0];
+            return marca.toLowerCase();
+        });
+
+        const tarjetasVehiculos = document.querySelectorAll('.car-card');
+
+        tarjetasVehiculos.forEach(tarjeta => {
+            const tituloVehiculo = tarjeta.querySelector('h4').textContent.toLowerCase();
+
+            const debeMostrarse = marcasSeleccionadas.length === 0 || marcasSeleccionadas.some(marca => tituloVehiculo.includes(marca));
+
+            if (debeMostrarse) {
+                tarjeta.style.display = ''; 
+            } else {
+                tarjeta.style.display = 'none';
+            }
+        });
+    });
+});
