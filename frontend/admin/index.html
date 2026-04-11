@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backoffice | Redline</title>
+  <link rel="stylesheet" href="admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="admin-header">
+    <div>
+      <p class="eyebrow">Backoffice</p>
+      <h1>REDLINE <span>CORE</span></h1>
+      <p id="welcomeText" class="muted">Cargando usuario...</p>
+    </div>
+    <div class="header-actions">
+      <div class="api-box">
+        <label for="apiBaseInput">API Base</label>
+        <div class="api-row">
+          <input id="apiBaseInput" placeholder="http://localhost:8000/api/v1" />
+          <button id="saveApiBtn" class="btn secondary">Guardar</button>
+        </div>
+        <small id="apiStatus" class="muted"></small>
+      </div>
+      <button id="logoutBtn" class="btn danger">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main class="admin-layout">
+    <section class="card metrics metrics-extended">
+      <div><p class="metric-label">Vehículos</p><h2 id="metricVehicles">0</h2></div>
+      <div><p class="metric-label">Sucursales</p><h2 id="metricBranches">0</h2></div>
+      <div><p class="metric-label">Clientes</p><h2 id="metricClients">0</h2></div>
+      <div><p class="metric-label">Ventas</p><h2 id="metricSales">0</h2></div>
+      <div><p class="metric-label">Permisos</p><h2 id="metricPermissions">0</h2></div>
+    </section>
+
+    <section class="card quick-nav">
+      <a href="#sectionBranches">Sucursales</a>
+      <a href="#sectionVehicles">Inventario</a>
+      <a href="#sectionClients">Clientes</a>
+      <a href="#sectionSales">Ventas</a>
+      <a href="#sectionSettings">Configuración</a>
+    </section>
+
+    <section id="sectionBranches" class="grid two-columns-equal">
+      <div class="card">
+        <div class="card-head">
+          <h3>Sucursales</h3>
+          <span class="muted">Crea una sucursal antes de registrar vehículos.</span>
+        </div>
+        <form id="branchForm" class="stack-form compact">
+          <input id="branchName" placeholder="Nombre de sucursal" required />
+          <input id="branchPhone" placeholder="Teléfono" />
+          <input id="branchEmail" type="email" placeholder="Email" />
+          <textarea id="branchAddress" placeholder="Dirección"></textarea>
+          <button class="btn primary" type="submit">Crear sucursal</button>
+          <div id="branchFormStatus" class="status-line"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Listado de sucursales</h3>
+          <span class="muted">Sucursales disponibles para operaciones.</span>
+        </div>
+        <div id="branchList" class="list-simple"></div>
+      </div>
+    </section>
+
+    <section id="sectionVehicles" class="grid two-columns-wide">
+      <div class="card sticky-card">
+        <div class="card-head">
+          <h3>Vehículo</h3>
+          <span class="muted">Crear o editar inventario</span>
+        </div>
+        <form id="vehicleForm" class="stack-form">
+          <input type="hidden" id="vehicleId" />
+          <div class="grid two">
+            <select id="vehicleBranch" required></select>
+            <input id="vehicleVin" placeholder="VIN / Chasis" required />
+            <input id="vehicleBrand" placeholder="Marca" required />
+            <input id="vehicleModel" placeholder="Modelo" required />
+            <input id="vehicleYear" type="number" min="1900" max="2100" placeholder="Año" required />
+            <input id="vehiclePrice" type="number" min="0" step="0.01" placeholder="Precio" required />
+            <input id="vehicleMileage" type="number" min="0" placeholder="Millaje" />
+            <input id="vehiclePlate" placeholder="Placa" />
+            <input id="vehicleColor" placeholder="Color" />
+            <input id="vehicleTransmission" placeholder="Transmisión" />
+            <input id="vehicleFuelType" placeholder="Combustible" />
+            <input id="vehicleType" placeholder="Tipo de vehículo" />
+          </div>
+          <textarea id="vehicleDescription" placeholder="Descripción"></textarea>
+          <div class="form-actions">
+            <button class="btn primary" type="submit">Guardar vehículo</button>
+            <button class="btn secondary" type="button" id="resetVehicleBtn">Limpiar</button>
+          </div>
+          <div id="vehicleFormStatus" class="status-line"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head space-between">
+          <div>
+            <h3>Inventario</h3>
+            <span class="muted">Administrar vehículos e imágenes</span>
+          </div>
+          <div class="toolbar">
+            <input id="vehicleSearch" placeholder="Buscar por marca, modelo, VIN o placa" />
+            <select id="vehicleStatusFilter">
+              <option value="">Todos los estados</option>
+              <option value="disponible">Disponible</option>
+              <option value="reservado">Reservado</option>
+              <option value="vendido">Vendido</option>
+              <option value="en_proceso">En proceso</option>
+              <option value="retirado">Retirado</option>
+            </select>
+            <button id="refreshVehiclesBtn" class="btn secondary">Actualizar</button>
+          </div>
+        </div>
+        <div id="vehicleList" class="vehicle-list"></div>
+      </div>
+    </section>
+
+    <section class="card hidden" id="imagesPanel">
+      <div class="card-head space-between">
+        <div>
+          <h3>Imágenes del vehículo</h3>
+          <span id="imagesTitle" class="muted"></span>
+        </div>
+        <button id="closeImagesPanel" class="btn secondary">Cerrar</button>
+      </div>
+      <form id="imageUploadForm" class="inline-form">
+        <input type="file" id="imageFile" accept="image/*" required />
+        <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
+        <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
+        <button class="btn primary" type="submit">Subir imagen</button>
+      </form>
+      <form id="imageUrlForm" class="inline-form" style="margin-top: 12px;">
+        <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
+        <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
+        <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
+        <button class="btn secondary" type="submit">Usar URL</button>
+      </form>
+      <div id="imageUploadStatus" class="status-line"></div>
+      <div id="imagesList" class="image-grid"></div>
+    </section>
+
+    <section id="sectionClients" class="grid two-columns-equal">
+      <div class="card sticky-card">
+        <div class="card-head">
+          <h3>Cliente</h3>
+          <span class="muted">CRM básico del dealer</span>
+        </div>
+        <form id="clientForm" class="stack-form">
+          <input type="hidden" id="clientId" />
+          <input id="clientFullName" placeholder="Nombre completo" required />
+          <div class="grid two">
+            <input id="clientDocumentType" placeholder="Tipo documento" />
+            <input id="clientDocumentNumber" placeholder="Número documento" />
+            <input id="clientEmail" type="email" placeholder="Email" />
+            <input id="clientPhone" placeholder="Teléfono" />
+            <input id="clientAlternatePhone" placeholder="Teléfono alterno" />
+            <input id="clientAddress" placeholder="Dirección" />
+          </div>
+          <textarea id="clientNotes" placeholder="Notas del cliente"></textarea>
+          <div class="subsection-title">Preferencias</div>
+          <div class="grid two">
+            <input id="prefBrands" placeholder="Marcas preferidas (Toyota, Honda)" />
+            <input id="prefVehicleType" placeholder="Tipo de vehículo" />
+            <input id="prefTransmission" placeholder="Transmisión" />
+            <input id="prefFuelType" placeholder="Combustible" />
+            <input id="prefColor" placeholder="Color" />
+            <input id="prefPriceMin" type="number" min="0" step="0.01" placeholder="Precio mínimo" />
+            <input id="prefPriceMax" type="number" min="0" step="0.01" placeholder="Precio máximo" />
+          </div>
+          <textarea id="prefNotes" placeholder="Notas de preferencia"></textarea>
+          <div class="form-actions">
+            <button class="btn primary" type="submit">Guardar cliente</button>
+            <button class="btn secondary" type="button" id="resetClientBtn">Limpiar</button>
+          </div>
+          <div id="clientFormStatus" class="status-line"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head space-between">
+          <div>
+            <h3>Clientes</h3>
+            <span class="muted">Búsqueda, edición e historial</span>
+          </div>
+          <div class="toolbar">
+            <input id="clientSearch" placeholder="Buscar por nombre, email, teléfono o documento" />
+            <button id="refreshClientsBtn" class="btn secondary">Actualizar</button>
+          </div>
+        </div>
+        <div id="clientList" class="list-grid"></div>
+        <div id="clientHistoryPanel" class="subpanel hidden"></div>
+      </div>
+    </section>
+
+    <section id="sectionSales" class="grid two-columns-equal">
+      <div class="card sticky-card">
+        <div class="card-head">
+          <h3>Venta</h3>
+          <span class="muted">Registrar o editar ventas</span>
+        </div>
+        <form id="saleForm" class="stack-form">
+          <input type="hidden" id="saleId" />
+          <div class="grid two">
+            <select id="saleBranch" required></select>
+            <select id="saleClient" required></select>
+            <select id="saleVehicle" required></select>
+            <select id="saleSeller"></select>
+            <input id="saleDate" type="datetime-local" />
+            <input id="salePrice" type="number" min="0" step="0.01" placeholder="Precio de venta" required />
+            <input id="saleCost" type="number" min="0" step="0.01" placeholder="Costo" />
+            <input id="salePaymentMethod" placeholder="Método de pago" />
+          </div>
+          <textarea id="saleNotes" placeholder="Notas"></textarea>
+          <div class="form-actions">
+            <button class="btn primary" type="submit">Guardar venta</button>
+            <button class="btn secondary" type="button" id="resetSaleBtn">Limpiar</button>
+          </div>
+          <div id="saleFormStatus" class="status-line"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head space-between">
+          <div>
+            <h3>Ventas</h3>
+            <span class="muted">Listado y comprobantes</span>
+          </div>
+          <div class="toolbar">
+            <button id="refreshSalesBtn" class="btn secondary">Actualizar</button>
+          </div>
+        </div>
+        <div id="saleList" class="list-grid"></div>
+      </div>
+    </section>
+
+    <section id="sectionSettings" class="grid two-columns-equal">
+      <div class="card sticky-card">
+        <div class="card-head">
+          <h3>Configuración general</h3>
+          <span class="muted">Datos del dealer y pie de documentos.</span>
+        </div>
+        <form id="settingsForm" class="stack-form">
+          <input id="settingsBusinessName" placeholder="Nombre del negocio" required />
+          <input id="settingsLogoPath" placeholder="Logo URL o ruta" />
+          <div class="grid two">
+            <input id="settingsContactEmail" type="email" placeholder="Email de contacto" />
+            <input id="settingsContactPhone" placeholder="Teléfono" />
+            <input id="settingsWhatsapp" placeholder="WhatsApp" />
+            <input id="settingsWebsite" placeholder="Sitio web" />
+            <input id="settingsFacebook" placeholder="Facebook" />
+            <input id="settingsInstagram" placeholder="Instagram" />
+          </div>
+          <textarea id="settingsAddress" placeholder="Dirección"></textarea>
+          <textarea id="settingsTerms" placeholder="Términos y condiciones"></textarea>
+          <textarea id="settingsPrivacy" placeholder="Política de privacidad"></textarea>
+          <div class="form-actions">
+            <button class="btn primary" type="submit">Guardar configuración</button>
+          </div>
+          <div id="settingsFormStatus" class="status-line"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="../api.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

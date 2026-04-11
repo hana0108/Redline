@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Redline Selection</title>
+  <link rel="stylesheet" href="login-style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header>
+    <div class="top-bar">
+      <div class="container top-bar-content">
+        <span>Santiago, República Dominicana</span>
+        <span>Acceso privado al backoffice</span>
+      </div>
+    </div>
+
+    <div class="main-header">
+      <div class="container header-content">
+        <a href="../index.html" class="logo-link" aria-label="Ir al inicio">
+          <h1 class="logo-text">REDLINE <span>SELECTION</span></h1>
+        </a>
+
+        <nav>
+          <ul>
+            <li><a href="../index.html">INICIO</a></li>
+            <li><a href="../index.html#inventario">INVENTARIO</a></li>
+            <li><a href="../index.html#financiamiento">FINANCIAMIENTO</a></li>
+            <li><a href="../index.html#contacto">CONTACTO</a></li>
+            <li><a href="index.html" class="active">LOGIN</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="login-section">
+    <div class="container">
+      <div class="login-shell">
+        <section class="login-brand-panel">
+          <p class="eyebrow">Acceso administrativo</p>
+          <h2>Gestiona tu inventario premium con una experiencia alineada a la marca.</h2>
+          <p class="brand-copy">
+            Ingresa al panel de control para administrar sucursales, vehículos, clientes y ventas del dealer.
+          </p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <span class="feature-badge">01</span>
+              <div>
+                <strong>Inventario centralizado</strong>
+                <p>Consulta y administra unidades disponibles desde el backoffice.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-badge">02</span>
+              <div>
+                <strong>Acceso seguro</strong>
+                <p>Inicia sesión con tu cuenta autorizada para operar la plataforma.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <span class="feature-badge">03</span>
+              <div>
+                <strong>Conectado al backend</strong>
+                <p>Verifica de inmediato la API activa antes de entrar al sistema.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="login-box" aria-label="Formulario de inicio de sesión">
+          <div class="login-header">
+            <p class="eyebrow">Bienvenido</p>
+            <h2>Iniciar sesión</h2>
+            <p>Accede al panel administrativo de Redline Selection.</p>
+          </div>
+
+          <form id="loginForm">
+            <div class="input-group">
+              <label for="email">Correo electrónico</label>
+              <input type="email" id="email" placeholder="admin@redline.local" required />
+            </div>
+
+            <div class="input-group">
+              <label for="password">Contraseña</label>
+              <input type="password" id="password" placeholder="Admin123*" required />
+            </div>
+
+            <div class="options">
+              <label><input type="checkbox" id="remember" /> <span>Recordarme</span></label>
+              <a href="#" onclick="return false;">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <button type="submit" class="btn-login">INICIAR SESIÓN</button>
+            <div id="loginStatus" class="status-box"></div>
+
+            <div class="api-card">
+              <span class="api-label">API actual</span>
+              <strong id="apiBaseLabel"></strong>
+            </div>
+          </form>
+
+          <div class="login-footer">
+            <p>¿No tienes cuenta? <a href="#" onclick="return false;">Crear cuenta</a></p>
+            <a href="../index.html" class="back-link">← Volver al Inventario</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="../api.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>

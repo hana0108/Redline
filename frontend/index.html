@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redline | Portal retirado</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main style="max-width:900px;margin:60px auto;padding:24px;">
+    <section class="hero">
+      <h1>Redline</h1>
+      <p id="retiredMessage">Cargando...</p>
+      <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <input id="apiBaseInput" placeholder="http://localhost:8000/api/v1" style="min-width:320px;padding:10px;" />
+        <button id="btnSaveApi">Guardar API Base</button>
+      </div>
+      <p style="margin-top:12px;opacity:.8;">API actual: <strong id="apiBaseLabel"></strong></p>
+      <p style="margin-top:24px;">El alcance activo del proyecto se centra en backoffice: sucursales, clientes, vehículos, ventas y reportes.</p>
+    </section>
+  </main>
+  <script src="api.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
