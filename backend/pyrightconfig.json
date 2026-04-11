@@ -1,0 +1,8 @@
+{
+  "venvPath": ".",
+  "venv": ".deps",
+  "include": ["app", "alembic"],
+  "extraPaths": ["."],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true
+}
