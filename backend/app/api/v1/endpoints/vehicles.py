@@ -3,7 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,7 @@ from app.schemas.vehicle import (
     VehicleUpdate,
 )
 from app.services.audit import add_audit_log
+from app.services.cache_service import cache_service
 from app.services.vehicle_service import (
     ensure_branch_exists,
     get_vehicle_image_or_404,
@@ -61,7 +62,7 @@ def list_vehicles(
 
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
-def create_vehicle(
+async def create_vehicle(
     payload: VehicleCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("vehicles.write"))],
@@ -85,6 +86,10 @@ def create_vehicle(
         new_data={"vin": vehicle.vin, "brand": vehicle.brand, "model": vehicle.model},
     )
     db.commit()
+
+    # Invalidate related caches after successful creation
+    await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
+
     return get_vehicle_or_404(db, vehicle.id)
 
 
@@ -98,7 +103,7 @@ def get_vehicle(
 
 
 @router.patch("/{vehicle_id}", response_model=VehicleResponse)
-def update_vehicle(
+async def update_vehicle(
     vehicle_id: UUID,
     payload: VehicleUpdate,
     db: Annotated[Session, Depends(get_db)],
@@ -135,17 +140,30 @@ def update_vehicle(
         new_data=update_data,
     )
     db.commit()
+
+    # Invalidate related caches after successful update
+    await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
+
     return get_vehicle_or_404(db, vehicle.id)
 
 
 @router.patch("/{vehicle_id}/status", response_model=VehicleResponse)
-def update_vehicle_status(
+async def update_vehicle_status(
     vehicle_id: UUID,
     payload: VehicleStatusUpdate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("vehicles.write"))],
 ) -> Vehicle:
     vehicle = get_vehicle_or_404(db, vehicle_id)
+
+    # Validar que si cambia a "disponible" o "en_proceso", tenga al menos una imagen
+    if payload.status in ("disponible", "en_proceso"):
+        image_count = db.scalar(select(func.count(VehicleImage.id)).where(VehicleImage.vehicle_id == vehicle_id))
+        if not image_count:
+            raise HTTPException(
+                status_code=400,
+                detail="El vehículo debe tener al menos una imagen antes de cambiar a este estado"
+            )
 
     old_status = vehicle.status
     vehicle.status = payload.status
@@ -169,6 +187,10 @@ def update_vehicle_status(
     )
 
     db.commit()
+
+    # Invalidate related caches after successful status change
+    await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
+
     return get_vehicle_or_404(db, vehicle.id)
 
 

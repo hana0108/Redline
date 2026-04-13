@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     MEDIA_DIR: str = "media"
     MEDIA_URL: str = "/media"
 
+    # Redis Cache Configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_ENABLED: bool = True
+    REDIS_CACHE_TTL_REPORTS: int = 900      # 15 minutes
+    REDIS_CACHE_TTL_LISTS: int = 1800        # 30 minutes
+    REDIS_CACHE_TTL_ENTITIES: int = 3600     # 1 hour
+    REDIS_CACHE_TTL_SEARCH: int = 600        # 10 minutes
+    REDIS_CACHE_TTL_SETTINGS: int = 86400    # 24 hours
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, value: Any) -> list[str]:

@@ -202,6 +202,18 @@ CREATE TABLE IF NOT EXISTS redline.client_preferences (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS redline.client_images (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id uuid NOT NULL REFERENCES redline.clients(id) ON DELETE CASCADE,
+    file_path text NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_cover boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_images_client ON redline.client_images(client_id);
+
 CREATE TABLE IF NOT EXISTS redline.sales (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     vehicle_id uuid NOT NULL UNIQUE REFERENCES redline.vehicles(id),
@@ -267,6 +279,8 @@ DROP TRIGGER IF EXISTS trg_clients_updated_at ON redline.clients;
 CREATE TRIGGER trg_clients_updated_at BEFORE UPDATE ON redline.clients FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_client_preferences_updated_at ON redline.client_preferences;
 CREATE TRIGGER trg_client_preferences_updated_at BEFORE UPDATE ON redline.client_preferences FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_client_images_updated_at ON redline.client_images;
+CREATE TRIGGER trg_client_images_updated_at BEFORE UPDATE ON redline.client_images FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_sales_updated_at ON redline.sales;
 CREATE TRIGGER trg_sales_updated_at BEFORE UPDATE ON redline.sales FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_documents_updated_at ON redline.documents;

@@ -115,40 +115,6 @@ def _build_doc(title: str, company: CompanyInfo, sections: Iterable[list[list[st
     doc.build(story)
     return buffer.getvalue()
 
-
-def build_reservation_pdf(*, company: CompanyInfo, reservation, vehicle, client, branch, seller=None) -> bytes:
-    sections = [
-        [
-            ["Reserva ID", reservation.id],
-            ["Fecha de reserva", reservation.reservation_date],
-            ["Vence", reservation.expires_at],
-            ["Estado", reservation.status.value if hasattr(reservation.status, "value") else reservation.status],
-            ["Monto", _money(reservation.amount)],
-        ],
-        [
-            ["Cliente", client.full_name],
-            ["Documento", f"{client.document_type or ''} {client.document_number or ''}".strip() or "—"],
-            ["Correo", client.email],
-            ["Teléfono", client.phone],
-            ["Dirección", client.address],
-        ],
-        [
-            ["Vehículo", f"{vehicle.brand} {vehicle.model} {vehicle.vehicle_year}"],
-            ["VIN", vehicle.vin],
-            ["Precio", _money(vehicle.price)],
-            ["Color", vehicle.color],
-            ["Transmisión", vehicle.transmission],
-        ],
-        [
-            ["Sucursal", branch.name],
-            ["Dirección sucursal", branch.address],
-            ["Vendedor", getattr(seller, "full_name", None)],
-            ["Notas", reservation.notes],
-        ],
-    ]
-    return _build_doc("Comprobante de reserva", company, sections)
-
-
 def build_sale_pdf(*, company: CompanyInfo, sale, vehicle, client, branch, seller=None) -> bytes:
     sections = [
         [

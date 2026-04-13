@@ -1,11 +1,30 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
+from app.cache.redis_cache import cache
 from app.core.config import settings
 
-app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager"""
+    # Startup
+    await cache.connect()
+
+    yield
+
+    # Shutdown
+    await cache.disconnect()
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    debug=settings.DEBUG,
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,

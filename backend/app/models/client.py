@@ -32,6 +32,9 @@ class Client(Base, TimestampMixin):
     preference: Mapped["ClientPreference | None"] = relationship(
         back_populates="client", cascade="all, delete-orphan", uselist=False
     )
+    images: Mapped[list["ClientImage"]] = relationship(
+        back_populates="client", cascade="all, delete-orphan"
+    )
 
 
 class ClientPreference(Base, TimestampMixin):
@@ -51,3 +54,17 @@ class ClientPreference(Base, TimestampMixin):
     notes: Mapped[str | None] = mapped_column(Text())
 
     client: Mapped[Client] = relationship(back_populates="preference")
+
+
+class ClientImage(Base, TimestampMixin):
+    __tablename__ = "client_images"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False
+    )
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    sort_order: Mapped[int] = mapped_column(default=0)
+    is_cover: Mapped[bool] = mapped_column(default=False)
+
+    client: Mapped[Client] = relationship(back_populates="images")

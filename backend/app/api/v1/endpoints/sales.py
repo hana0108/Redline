@@ -20,6 +20,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.sale import SaleCreate, SaleResponse, SaleUpdate
 from app.services.audit import add_audit_log
+from app.services.cache_service import cache_service
 from app.services.commercial_service import ensure_vehicle_sellable, get_sale_or_404, validate_commercial_refs
 from app.services.pdf_generator import build_sale_pdf
 from app.services.response_service import stream_pdf
@@ -47,7 +48,7 @@ def list_sales(
 
 
 @router.post("", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
-def create_sale(
+async def create_sale(
     payload: SaleCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("sales.write"))],
@@ -102,11 +103,17 @@ def create_sale(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.refresh(sale)
+
+    # Invalidate related caches after successful creation
+    await cache_service.invalidate_sale_related_caches()
+    await cache_service.invalidate_vehicle_related_caches(str(payload.vehicle_id))
+    await cache_service.invalidate_client_related_caches(str(payload.client_id))
+
     return sale
 
 
 @router.patch("/{sale_id}", response_model=SaleResponse)
-def update_sale(
+async def update_sale(
     sale_id: UUID,
     payload: SaleUpdate,
     db: Annotated[Session, Depends(get_db)],
@@ -164,11 +171,17 @@ def update_sale(
         raise HTTPException(status_code=409, detail="No fue posible actualizar la venta") from exc
 
     db.refresh(sale)
+
+    # Invalidate related caches after successful update
+    await cache_service.invalidate_sale_related_caches()
+    await cache_service.invalidate_vehicle_related_caches(str(sale.vehicle_id))
+    await cache_service.invalidate_client_related_caches(str(sale.client_id))
+
     return sale
 
 
 @router.delete("/{sale_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_sale(
+async def delete_sale(
     sale_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("sales.write"))],
@@ -195,6 +208,11 @@ def delete_sale(
         old_data=old_data,
     )
     db.commit()
+
+    # Invalidate related caches after successful deletion
+    await cache_service.invalidate_sale_related_caches()
+    await cache_service.invalidate_vehicle_related_caches(str(sale.vehicle_id))
+    await cache_service.invalidate_client_related_caches(str(sale.client_id))
 
 
 @router.get("/{sale_id}", response_model=SaleResponse)
