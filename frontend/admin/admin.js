@@ -6,13 +6,7 @@ let USERS = [];
 let VEHICLES = [];
 let CLIENTS = [];
 let SALES = [];
-let VEHICLE_CATALOGS = {
-  brands: [],
-  vehicle_types: [],
-  fuel_types: [],
-  transmissions: [],
-  colors: [],
-};
+let CATALOGS = { brands: [], vehicle_types: [], fuel_types: [], transmissions: [], colors: [] };
 let ACTIVE_IMAGES_VEHICLE_ID = null;
 
 const STATUS_LABELS = {
@@ -124,68 +118,54 @@ function populateSelect(id, items, placeholder, selectedValue = '', mapper = (x)
 function populateCatalogSelect(id, items, placeholder, selectedValue = '') {
   const node = el(id);
   if (!node) return;
-  const options = [`<option value="">${escapeHtml(placeholder)}</option>`].concat(
-    items.map(item => optionHtml(item.code, item.name, String(item.code) === String(selectedValue)))
-  );
-  node.innerHTML = options.join('');
+  node.innerHTML = [
+    `<option value="">${escapeHtml(placeholder)}</option>`,
+    ...items.map(item =>
+      `<option value="${escapeHtml(item.name)}"${item.name === selectedValue ? ' selected' : ''}>${escapeHtml(item.name)}</option>`
+    ),
+  ].join('');
 }
 
-function populateCatalogMultiSelect(id, items, selectedValues = []) {
-  const node = el(id);
-  if (!node) return;
-  const selectedSet = new Set((selectedValues || []).map(String));
-  node.innerHTML = items
-    .map(item => optionHtml(item.code, item.name, selectedSet.has(String(item.code))))
-    .join('');
-}
-
-function readMultiSelectValues(id) {
-  const node = el(id);
-  if (!node) return [];
-  return Array.from(node.selectedOptions || []).map(option => option.value).filter(Boolean);
-}
-
-function setMultiSelectValues(id, values = []) {
-  const node = el(id);
-  if (!node) return;
-  const selectedSet = new Set((values || []).map(String));
-  Array.from(node.options).forEach(option => {
-    option.selected = selectedSet.has(String(option.value));
-  });
-}
-
-async function loadVehicleModels(brandCode, selectedValue = '') {
-  const node = el('vehicleModel');
-  if (!node) return;
-  if (!brandCode) {
-    node.innerHTML = '<option value="">Selecciona marca primero</option>';
+async function loadVehicleModels(brandName, selectedModel = '') {
+  if (!brandName) {
+    populateCatalogSelect('vehicleModel', [], 'Modelo');
     return;
   }
-
-  const models = await window.REDLINE.request(`/catalogs/vehicle-models?brand_code=${encodeURIComponent(brandCode)}`);
-  const options = [`<option value="">${models.length ? 'Selecciona modelo' : 'Sin modelos disponibles'}</option>`]
-    .concat(models.map(item => optionHtml(item.code, item.name, String(item.code) === String(selectedValue))));
-  node.innerHTML = options.join('');
+  try {
+    const models = await window.REDLINE.request(
+      `/catalogs/vehicle-models?brand_code=${encodeURIComponent(brandName)}`
+    );
+    populateCatalogSelect('vehicleModel', models, 'Modelo', selectedModel);
+  } catch (_) {
+    populateCatalogSelect('vehicleModel', [], 'Modelo');
+  }
 }
 
-function syncVehicleCatalogSelects() {
-  populateCatalogSelect('vehicleBrand', VEHICLE_CATALOGS.brands || [], 'Selecciona marca', el('vehicleBrand')?.value || '');
-  populateCatalogSelect('vehicleType', VEHICLE_CATALOGS.vehicle_types || [], 'Tipo de vehículo', el('vehicleType')?.value || '');
-  populateCatalogSelect('vehicleFuelType', VEHICLE_CATALOGS.fuel_types || [], 'Combustible', el('vehicleFuelType')?.value || '');
-  populateCatalogSelect('vehicleTransmission', VEHICLE_CATALOGS.transmissions || [], 'Transmisión', el('vehicleTransmission')?.value || '');
-  populateCatalogSelect('vehicleColor', VEHICLE_CATALOGS.colors || [], 'Color', el('vehicleColor')?.value || '');
+function syncCatalogSelects() {
+  populateCatalogSelect('vehicleBrand', CATALOGS.brands || [], 'Marca');
+  populateCatalogSelect('vehicleColor', CATALOGS.colors || [], 'Color');
+  populateCatalogSelect('vehicleTransmission', CATALOGS.transmissions || [], 'Transmisión');
+  populateCatalogSelect('vehicleFuelType', CATALOGS.fuel_types || [], 'Combustible');
+  populateCatalogSelect('vehicleType', CATALOGS.vehicle_types || [], 'Tipo de vehículo');
 
-  populateCatalogMultiSelect('prefBrands', VEHICLE_CATALOGS.brands || [], readMultiSelectValues('prefBrands'));
-  populateCatalogSelect('prefVehicleType', VEHICLE_CATALOGS.vehicle_types || [], 'Tipo de vehículo preferido', el('prefVehicleType')?.value || '');
-  populateCatalogSelect('prefFuelType', VEHICLE_CATALOGS.fuel_types || [], 'Combustible preferido', el('prefFuelType')?.value || '');
-  populateCatalogSelect('prefTransmission', VEHICLE_CATALOGS.transmissions || [], 'Transmisión preferida', el('prefTransmission')?.value || '');
-  populateCatalogSelect('prefColor', VEHICLE_CATALOGS.colors || [], 'Color preferido', el('prefColor')?.value || '');
+  // Client preference selects reuse the same catalog data — preserve current selection
+  const savedColor = el('prefColor')?.value || '';
+  const savedTrans = el('prefTransmission')?.value || '';
+  const savedFuel = el('prefFuelType')?.value || '';
+  const savedType = el('prefVehicleType')?.value || '';
+  populateCatalogSelect('prefColor', CATALOGS.colors || [], 'Color', savedColor);
+  populateCatalogSelect('prefTransmission', CATALOGS.transmissions || [], 'Transmisión', savedTrans);
+  populateCatalogSelect('prefFuelType', CATALOGS.fuel_types || [], 'Combustible', savedFuel);
+  populateCatalogSelect('prefVehicleType', CATALOGS.vehicle_types || [], 'Tipo de vehículo', savedType);
 }
 
-async function loadVehicleCatalogs() {
-  VEHICLE_CATALOGS = await window.REDLINE.request('/catalogs/vehicles');
-  syncVehicleCatalogSelects();
-  await loadVehicleModels(el('vehicleBrand')?.value || '');
+async function loadCatalogs() {
+  try {
+    CATALOGS = await window.REDLINE.request('/catalogs/vehicles');
+  } catch (_) {
+    // Catalogs are non-critical; keep empty defaults
+  }
+  syncCatalogSelects();
 }
 
 function getUserName(userId) {
@@ -321,18 +301,19 @@ function resetVehicleForm() {
   el('vehicleForm').reset();
   el('vehicleId').value = '';
   if (BRANCHES[0]) el('vehicleBranch').value = BRANCHES[0].id;
-  syncVehicleCatalogSelects();
-  loadVehicleModels('');
   showMessage('vehicleFormStatus', '');
 }
 
-async function fillVehicleForm(vehicle) {
+function fillVehicleForm(vehicle) {
   el('vehicleId').value = vehicle.id;
   el('vehicleBranch').value = vehicle.branch_id;
   el('vehicleVin').value = vehicle.vin;
   el('vehicleBrand').value = vehicle.brand;
-  syncVehicleCatalogSelects();
-  await loadVehicleModels(vehicle.brand, vehicle.model);
+  // Load models for this brand, then set the model value
+  loadVehicleModels(vehicle.brand, vehicle.model).catch(() => {
+    const node = el('vehicleModel');
+    if (node) node.innerHTML = `<option value="${escapeHtml(vehicle.model || '')}">${escapeHtml(vehicle.model || 'Modelo')}</option>`;
+  });
   el('vehicleYear').value = vehicle.vehicle_year;
   el('vehiclePrice').value = vehicle.price;
   el('vehicleMileage').value = vehicle.mileage || 0;
@@ -365,7 +346,7 @@ function collectVehiclePayload() {
 }
 
 function collectClientPreference() {
-  const brands = readMultiSelectValues('prefBrands');
+  const brands = el('prefBrands').value.split(',').map(item => item.trim()).filter(Boolean);
   const payload = {
     preferred_brands: brands.length ? brands : null,
     price_min: el('prefPriceMin').value ? Number(el('prefPriceMin').value) : null,
@@ -382,8 +363,6 @@ function collectClientPreference() {
 function resetClientForm() {
   el('clientForm').reset();
   el('clientId').value = '';
-  syncVehicleCatalogSelects();
-  setMultiSelectValues('prefBrands', []);
   showMessage('clientFormStatus', '');
 }
 
@@ -397,8 +376,7 @@ function fillClientForm(client) {
   el('clientAlternatePhone').value = client.alternate_phone || '';
   el('clientAddress').value = client.address || '';
   el('clientNotes').value = client.notes || '';
-  syncVehicleCatalogSelects();
-  setMultiSelectValues('prefBrands', client.preference?.preferred_brands || []);
+  el('prefBrands').value = (client.preference?.preferred_brands || []).join(', ');
   el('prefVehicleType').value = client.preference?.vehicle_type || '';
   el('prefTransmission').value = client.preference?.transmission || '';
   el('prefFuelType').value = client.preference?.fuel_type || '';
@@ -762,7 +740,7 @@ async function handleMainClick(evt) {
   try {
     if (action === 'edit-vehicle') {
       const vehicle = VEHICLES.find(item => item.id === id);
-      if (vehicle) await fillVehicleForm(vehicle);
+      if (vehicle) fillVehicleForm(vehicle);
       return;
     }
     if (action === 'images') {
@@ -845,12 +823,6 @@ async function handleImageActions(evt) {
 }
 
 function wireUi() {
-  el('apiBaseInput').value = window.REDLINE.getApiBase();
-  el('saveApiBtn').addEventListener('click', async () => {
-    window.REDLINE.setApiBase(el('apiBaseInput').value.trim());
-    showMessage('apiStatus', 'Guardado. Recargando...');
-    await bootstrap();
-  });
   el('logoutBtn').addEventListener('click', () => {
     window.REDLINE.clearToken();
     window.location.href = '../login/index.html';
@@ -870,14 +842,11 @@ function wireUi() {
 
   el('vehicleSearch').addEventListener('input', renderVehicles);
   el('vehicleStatusFilter').addEventListener('change', renderVehicles);
-  el('vehicleBrand').addEventListener('change', async () => {
-    try {
-      await loadVehicleModels(el('vehicleBrand').value);
-    } catch (error) {
-      showMessage('vehicleFormStatus', error.message, true);
-    }
-  });
   el('clientSearch').addEventListener('input', renderClients);
+
+  el('vehicleBrand').addEventListener('change', (evt) => {
+    loadVehicleModels(evt.target.value).catch(() => {});
+  });
 
   el('refreshVehiclesBtn').addEventListener('click', loadVehicles);
   el('refreshClientsBtn').addEventListener('click', loadClients);
@@ -896,7 +865,7 @@ async function bootstrap() {
   if (!ensureAuthenticated()) return;
   try {
     await loadCurrentUser();
-    await loadVehicleCatalogs();
+    await loadCatalogs();
     await loadUsers();
     await loadBranches();
     await loadVehicles();
@@ -907,7 +876,6 @@ async function bootstrap() {
     resetVehicleForm();
     resetClientForm();
     resetSaleForm();
-    showMessage('apiStatus', `Conectado a ${window.REDLINE.getApiBase()}`);
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
       window.REDLINE.clearToken();

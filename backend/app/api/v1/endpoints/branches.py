@@ -11,7 +11,7 @@ from app.api.deps import require_permissions
 from app.core.exceptions import not_found
 from app.db.session import get_db
 from app.models.branch import Branch
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, StatusGeneric
 from app.models.user import User
 from app.schemas.branch import BranchCreate, BranchResponse, BranchUpdate
 from app.services.audit import add_audit_log
@@ -27,6 +27,27 @@ def list_branches(
     _: Annotated[User, Depends(require_permissions("branches.read"))],
 ) -> list[Branch]:
     return list(db.scalars(select(Branch).order_by(Branch.name.asc())).all())
+
+
+@router.get("/public")
+def list_public_branches(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[dict]:
+    branches = list(
+        db.scalars(
+            select(Branch).where(Branch.status == StatusGeneric.ACTIVE).order_by(Branch.name.asc())
+        ).all()
+    )
+    return [
+        {
+            "id": str(item.id),
+            "name": item.name,
+            "address": item.address,
+            "phone": item.phone,
+            "email": item.email,
+        }
+        for item in branches
+    ]
 
 
 @router.post("", response_model=BranchResponse, status_code=status.HTTP_201_CREATED)
@@ -50,7 +71,9 @@ def create_branch(
             "address": branch.address,
             "phone": branch.phone,
             "email": branch.email,
-            "status": branch.status.value if hasattr(branch.status, "value") else str(branch.status),
+            "status": branch.status.value
+            if hasattr(branch.status, "value")
+            else str(branch.status),
         },
     )
 
@@ -108,6 +131,7 @@ def update_branch(
     db.refresh(branch)
     return branch
 
+
 @router.delete("/{branch_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_branch(
     branch_id: UUID,
@@ -123,7 +147,7 @@ def delete_branch(
     if vehicle_count:
         raise HTTPException(
             status_code=409,
-            detail=f"No se puede eliminar la sucursal: tiene {vehicle_count} vehículo(s) asociado(s)"
+            detail=f"No se puede eliminar la sucursal: tiene {vehicle_count} vehículo(s) asociado(s)",
         )
 
     # Validar que no haya ventas vinculadas
@@ -131,7 +155,7 @@ def delete_branch(
     if sale_count:
         raise HTTPException(
             status_code=409,
-            detail=f"No se puede eliminar la sucursal: tiene {sale_count} venta(s) asociada(s)"
+            detail=f"No se puede eliminar la sucursal: tiene {sale_count} venta(s) asociada(s)",
         )
 
     add_audit_log(

@@ -3,81 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Redline | Portal retirado</title>
-
- 
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
-
-
-  <link rel="stylesheet" href="style.css">
+  <title>Redline Selection | Inventario</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Antonio:wght@400;700&family=Manrope:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-  <header>
+  <header class="site-header">
     <div class="top-bar">
       <div class="container top-bar-content">
         <span>Santiago, República Dominicana</span>
-        <span>Horario: Lunes a Viernes 9am - 6pm</span>
+        <span>Acceso privado al backoffice — <a href="login/index.html">Login</a></span>
       </div>
     </div>
-
     <div class="main-header">
       <div class="container header-content">
-        <h1 class="logo-text">REDLINE <span>SELECTION</span></h1>
-
+        <a href="index.html" class="logo-link" aria-label="Ir al inicio">
+          <h1 class="logo-text">REDLINE <span>SELECTION</span></h1>
+        </a>
         <nav>
           <ul>
-            <li><a href="index.html">INICIO</a></li>
-            <li><a href="index.html#inventario">INVENTARIO</a></li>
-            <li><a href="index.html#financiamiento">FINANCIAMIENTO</a></li>
-            <li><a href="index.html#contacto">CONTACTO</a></li>
+            <li><a href="index.html" class="active">INICIO</a></li>
+            <li><a href="#inventario">INVENTARIO</a></li>
+            <li><a href="#financiamiento">FINANCIAMIENTO</a></li>
+            <li><a href="#contacto">CONTACTO</a></li>
+            <li><a href="login/index.html" class="nav-login-btn">LOGIN</a></li>
           </ul>
         </nav>
       </div>
     </div>
   </header>
 
-  <main class="retired-main">
-    <div class="retired-card">
-      <div class="retired-badge">Aviso importante</div>
-      <h2>REDLINE <span>SELECTION</span></h2>
-      <p class="retired-location">Santiago, República Dominicana</p>
-
-      <hr class="retired-divider" />
-
-      <p class="retired-msg">
-        El portal público ha sido retirado. Para administrar clientes,
-        vehículos y ventas utiliza el sistema de gestión interna (Backoffice).
-      </p>
-
-      <p class="retired-note">
-        El alcance activo del proyecto se centra en backoffice: sucursales,
-        clientes, vehículos, ventas y reportes.
-      </p>
-
-      <a href="#" id="btnInventario" class="btn-inventario">VER INVENTARIO</a>
+  <section class="hero">
+    <div class="container hero-content">
+      <p class="eyebrow">Inventario público</p>
+      <h2>Encuentra tu próximo vehículo</h2>
+      <p>Filtra por sucursal, busca por marca/modelo y revisa cada unidad con detalle.</p>
     </div>
+  </section>
+
+  <main class="container layout">
+    <aside class="filters-card">
+      <h3>Filtros</h3>
+      <label class="field">
+        <span>Sucursal</span>
+        <select id="branchFilter"></select>
+      </label>
+      <label class="field">
+        <span>Buscar</span>
+        <input id="searchInput" placeholder="Marca, modelo, VIN o placa" />
+      </label>
+      <label class="field">
+        <span>Estado</span>
+        <select id="statusFilter">
+          <option value="disponible" selected>Disponible</option>
+          <option value="">Todos</option>
+          <option value="reservado">Reservado</option>
+          <option value="en_proceso">En proceso</option>
+        </select>
+      </label>
+      <button id="btnRefresh" class="btn">Actualizar inventario</button>
+    </aside>
+
+    <section>
+      <div class="list-head">
+        <h3>Vehículos disponibles</h3>
+        <p id="resultCount">0 resultados</p>
+      </div>
+      <div id="vehicleGrid" class="vehicle-grid"></div>
+    </section>
   </main>
 
-  <footer class="footer">
-    <div class="container footer-grid">
-      <div class="footer-about">
-        <h3 class="logo-text">REDLINE <span>SELECTION</span></h3>
-        <p>Expertos en vehículos de alta gama en Santiago.</p>
+  <div id="vehicleModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-panel">
+      <button id="closeModal" class="close-btn" aria-label="Cerrar">x</button>
+      <img id="mImage" class="modal-image" alt="Vehículo" />
+      <h4 id="mTitle"></h4>
+      <p id="mPrice" class="modal-price"></p>
+      <p id="mBranch" class="modal-branch"></p>
+      <div class="modal-grid">
+        <div><strong>Año:</strong> <span id="mYear"></span></div>
+        <div><strong>Millaje:</strong> <span id="mMileage"></span></div>
+        <div><strong>Transmisión:</strong> <span id="mTransmission"></span></div>
+        <div><strong>Combustible:</strong> <span id="mFuel"></span></div>
+        <div><strong>Tipo:</strong> <span id="mType"></span></div>
+        <div><strong>Color:</strong> <span id="mColor"></span></div>
       </div>
-
-      <div class="footer-links">
-        <h4>Soporte</h4>
-        <p>Email: <a href="mailto:info@redlineselection.com">info@redlineselection.com</a></p>
-        <p>Teléfono: (809) 123-4567</p>
-        <p>Dirección: Av. 27 de Febrero #123, Santiago</p>
+      <p id="mDescription" class="modal-description"></p>
+      <div class="modal-actions">
+        <a id="proceedSaleBtn" class="btn" href="login/index.html">Proceder a venta</a>
       </div>
     </div>
+  </div>
 
-    <div class="footer-bottom">
-      <p>&copy; 2026 Redline Selection. Todos los derechos reservados.</p>
-    </div>
-  </footer>
-
+  <script src="api.js"></script>
+  <script src="index.js"></script>
 </body>
 </html>
