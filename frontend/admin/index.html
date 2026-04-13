@@ -31,8 +31,10 @@
     <section class="card quick-nav">
       <a href="#sectionBranches">Sucursales</a>
       <a href="#sectionVehicles">Inventario</a>
+      <a href="#sectionReserved">Reservados</a>
       <a href="#sectionClients">Clientes</a>
       <a href="#sectionSales">Ventas</a>
+      <a href="#sectionSalesHistory">Historial</a>
       <a href="#sectionSettings">Configuración</a>
     </section>
 
@@ -61,7 +63,7 @@
           <h3>Listado de sucursales</h3>
           <span class="muted">Sucursales disponibles para operaciones.</span>
         </div>
-        <div id="branchList" class="list-simple"></div>
+        <div id="branchList" class="list-simple scrollable-list"></div>
       </div>
     </section>
 
@@ -104,6 +106,9 @@
           </div>
           <div class="toolbar">
             <input id="vehicleSearch" placeholder="Buscar por marca, modelo, VIN o placa" />
+            <select id="vehicleBranchFilter">
+              <option value="">Todas las sucursales</option>
+            </select>
             <select id="vehicleStatusFilter">
               <option value="">Todos los estados</option>
               <option value="disponible">Disponible</option>
@@ -115,8 +120,20 @@
             <button id="refreshVehiclesBtn" class="btn secondary">Actualizar</button>
           </div>
         </div>
-        <div id="vehicleList" class="vehicle-list"></div>
+        <div id="vehicleList" class="vehicle-list scrollable-list"></div>
       </div>
+    </section>
+
+    <!-- Vehículos reservados -->
+    <section id="sectionReserved" class="card">
+      <div class="card-head space-between">
+        <div>
+          <h3>Vehículos reservados</h3>
+          <span class="muted">Unidades con reserva activa pendientes de cierre</span>
+        </div>
+        <button id="refreshReservedBtn" class="btn secondary">Actualizar</button>
+      </div>
+      <div id="reservedList" class="vehicle-list scrollable-list"></div>
     </section>
 
     <section id="sectionClients" class="grid two-columns-equal">
@@ -167,7 +184,7 @@
             <button id="refreshClientsBtn" class="btn secondary">Actualizar</button>
           </div>
         </div>
-        <div id="clientList" class="list-grid"></div>
+        <div id="clientList" class="list-grid scrollable-list"></div>
         <div id="clientHistoryPanel" class="subpanel hidden"></div>
       </div>
     </section>
@@ -209,8 +226,26 @@
             <button id="refreshSalesBtn" class="btn secondary">Actualizar</button>
           </div>
         </div>
-        <div id="saleList" class="list-grid"></div>
+        <div id="saleList" class="list-grid scrollable-list"></div>
       </div>
+    </section>
+
+    </section>
+
+    <!-- Historial de ventas -->
+    <section id="sectionSalesHistory" class="card">
+      <div class="card-head space-between">
+        <div>
+          <h3>Historial de ventas</h3>
+          <span class="muted">Todas las transacciones registradas</span>
+        </div>
+        <div class="toolbar">
+          <select id="salesHistoryBranchFilter"><option value="">Todas las sucursales</option></select>
+          <input id="salesHistorySearch" placeholder="Buscar cliente o vehículo" />
+          <button id="refreshSalesHistoryBtn" class="btn secondary">Actualizar</button>
+        </div>
+      </div>
+      <div id="salesHistoryList" class="list-grid scrollable-list"></div>
     </section>
 
     <section id="sectionSettings" class="grid two-columns-equal">

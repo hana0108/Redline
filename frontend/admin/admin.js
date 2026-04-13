@@ -202,6 +202,22 @@ function syncSharedSelects() {
   populateSelect('vehicleBranch', BRANCHES, BRANCHES.length ? 'Selecciona sucursal' : 'Primero crea una sucursal', el('vehicleBranch')?.value, branchMapper);
   populateSelect('saleBranch', BRANCHES, BRANCHES.length ? 'Sucursal' : 'Sin sucursales', el('saleBranch')?.value, branchMapper);
 
+  // Branch filters for inventory and history
+  const allOpt = '<option value="">Todas las sucursales</option>';
+  const branchOptions = BRANCHES.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+  const branchFilterNode = el('vehicleBranchFilter');
+  if (branchFilterNode) {
+    const prev = branchFilterNode.value;
+    branchFilterNode.innerHTML = allOpt + branchOptions;
+    branchFilterNode.value = prev;
+  }
+  const histBranchNode = el('salesHistoryBranchFilter');
+  if (histBranchNode) {
+    const prev = histBranchNode.value;
+    histBranchNode.innerHTML = allOpt + branchOptions;
+    histBranchNode.value = prev;
+  }
+
   const clientMapper = (item) => ({ value: item.id, label: item.full_name });
   populateSelect('saleClient', CLIENTS, CLIENTS.length ? 'Selecciona cliente' : 'Sin clientes', el('saleClient')?.value, clientMapper);
 
@@ -306,9 +322,12 @@ function vehicleCard(vehicle) {
 function renderVehicles() {
   const search = el('vehicleSearch').value.trim().toLowerCase();
   const status = el('vehicleStatusFilter').value;
+  const branchId = el('vehicleBranchFilter')?.value || '';
   const filtered = VEHICLES.filter(vehicle => {
     const text = `${vehicle.brand} ${vehicle.model} ${vehicle.vin} ${vehicle.plate || ''}`.toLowerCase();
-    return (!search || text.includes(search)) && (!status || vehicle.status === status);
+    return (!search || text.includes(search))
+      && (!status || vehicle.status === status)
+      && (!branchId || String(vehicle.branch_id) === branchId);
   });
 
   setText('metricVehicles', String(VEHICLES.length));
@@ -317,9 +336,80 @@ function renderVehicles() {
     : '<div class="muted">No hay vehículos que coincidan con el filtro.</div>';
 }
 
+function renderReserved() {
+  const reserved = VEHICLES.filter(v => v.status === 'reservado');
+  el('reservedList').innerHTML = reserved.length
+    ? reserved.map(vehicle => {
+        const img = window.REDLINE.pickCoverImage(vehicle) || 'https://via.placeholder.com/800x450?text=Sin+imagen';
+        return `
+          <article class="vehicle-card">
+            <img src="${escapeHtml(img)}" alt="${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}" />
+            <div>
+              <div class="entity-card-header">
+                <div>
+                  <h4>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h4>
+                  <div class="muted">VIN: ${escapeHtml(vehicle.vin)} · ${escapeHtml(getBranchName(vehicle.branch_id))}</div>
+                </div>
+                <span class="badge warning">Reservado</span>
+              </div>
+              <div class="meta-grid">
+                <div class="meta-pill">Año: ${vehicle.vehicle_year}</div>
+                <div class="meta-pill">Precio: ${window.REDLINE.formatCurrencyRD(vehicle.price)}</div>
+                <div class="meta-pill">Millaje: ${vehicle.mileage || 0}</div>
+              </div>
+              <div class="vehicle-actions">
+                <button class="btn secondary small" data-action="edit-vehicle" data-id="${vehicle.id}">Editar</button>
+                <select class="status-select" data-action="status" data-id="${vehicle.id}">
+                  ${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${vehicle.status === value ? 'selected' : ''}>${label}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('')
+    : '<div class="muted" style="padding: 12px 0;">No hay vehículos reservados actualmente.</div>';
+}
+
+function renderSalesHistory() {
+  const branchId = el('salesHistoryBranchFilter')?.value || '';
+  const search = el('salesHistorySearch')?.value.trim().toLowerCase() || '';
+  const filtered = SALES.filter(item => {
+    const clientName = getClientName(item.client_id).toLowerCase();
+    const vehicleLabel = getVehicleLabel(item.vehicle_id).toLowerCase();
+    return (!branchId || String(item.branch_id) === branchId)
+      && (!search || clientName.includes(search) || vehicleLabel.includes(search));
+  });
+  const sorted = [...filtered].sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
+  el('salesHistoryList').innerHTML = sorted.length
+    ? sorted.map(item => `
+        <div class="entity-card">
+          <div class="entity-card-header">
+            <div>
+              <h4>${escapeHtml(getClientName(item.client_id))}</h4>
+              <div class="muted">${escapeHtml(getVehicleLabel(item.vehicle_id))}</div>
+            </div>
+            <span class="badge ${badgeClass(item.status)}">${escapeHtml(SALE_LABELS[item.status] || item.status)}</span>
+          </div>
+          <div class="entity-meta">
+            <span class="meta-pill">Sucursal: ${escapeHtml(getBranchName(item.branch_id))}</span>
+            <span class="meta-pill">Precio: ${window.REDLINE.formatCurrencyRD(item.sale_price)}</span>
+            <span class="meta-pill">Pago: ${escapeHtml(item.payment_method || 'No indicado')}</span>
+            <span class="meta-pill">Vendedor: ${escapeHtml(item.seller_user_id ? getUserName(item.seller_user_id) : 'Sin vendedor')}</span>
+          </div>
+          <div class="muted">Fecha: ${formatDateTime(item.sale_date)}</div>
+          <div class="entity-actions" style="margin-top: 10px;">
+            <button class="btn secondary small" data-action="edit-sale" data-id="${item.id}">Editar</button>
+            <button class="btn secondary small" data-action="pdf-sale" data-id="${item.id}">PDF</button>
+          </div>
+        </div>
+      `).join('')
+    : '<div class="muted" style="padding: 12px 0;">No hay ventas para los filtros aplicados.</div>';
+}
+
 async function loadVehicles() {
   VEHICLES = await window.REDLINE.request('/vehicles');
   renderVehicles();
+  renderReserved();
   syncSharedSelects();
 }
 
@@ -507,6 +597,7 @@ function saleCard(item) {
 function renderSales() {
   setText('metricSales', String(SALES.length));
   el('saleList').innerHTML = SALES.length ? SALES.map(saleCard).join('') : '<div class="muted">No hay ventas registradas.</div>';
+  renderSalesHistory();
 }
 
 async function loadSales() {
@@ -916,7 +1007,12 @@ function wireUi() {
 
   el('vehicleSearch').addEventListener('input', renderVehicles);
   el('vehicleStatusFilter').addEventListener('change', renderVehicles);
+  el('vehicleBranchFilter').addEventListener('change', renderVehicles);
   el('clientSearch').addEventListener('input', renderClients);
+  el('salesHistoryBranchFilter').addEventListener('change', renderSalesHistory);
+  el('salesHistorySearch').addEventListener('input', renderSalesHistory);
+  el('refreshReservedBtn').addEventListener('click', loadVehicles);
+  el('refreshSalesHistoryBtn').addEventListener('click', loadSales);
 
   el('saleBranch').addEventListener('change', syncSharedSelects);
 

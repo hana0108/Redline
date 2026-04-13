@@ -84,16 +84,20 @@ body {
 }
 .metric-label {
   color: var(--muted);
-  margin: 0 0 8px;
-  font-size: 13px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
 }
 .metrics h2 {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
+  font-weight: 700;
 }
 .quick-nav {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .quick-nav a {
@@ -102,11 +106,13 @@ body {
   text-decoration: none;
   color: var(--text);
   background: #edf1f5;
-  padding: 10px 14px;
+  padding: 9px 16px;
   border-radius: 999px;
   font-weight: 600;
+  font-size: 13px;
+  transition: background .15s, color .15s;
 }
-.quick-nav a:hover { background: #dfe6ee; }
+.quick-nav a:hover { background: var(--red); color: #fff; }
 .grid.two-columns-equal {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -215,6 +221,16 @@ textarea { min-height: 110px; resize: vertical; }
   display: grid;
   gap: 14px;
 }
+.scrollable-list {
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.scrollable-list::-webkit-scrollbar { width: 6px; }
+.scrollable-list::-webkit-scrollbar-track { background: transparent; }
+.scrollable-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
 .vehicle-card {
   border: 1px solid var(--line);
   border-radius: 14px;
