@@ -15,9 +15,9 @@ from app.models.enums import AuditAction
 from app.models.sale import Sale
 from app.models.user import User
 from app.schemas.client import (
+    ClientImageResponse,
     ClientCreate,
     ClientHistoryResponse,
-    ClientImageResponse,
     ClientResponse,
     ClientUpdate,
     HistorySale,
