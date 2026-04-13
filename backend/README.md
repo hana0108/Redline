@@ -32,9 +32,17 @@ podman exec -i -u postgres arca psql -d redline < ../database/redline_schema.sql
 # Marcar como migrada:
 alembic stamp head
 
+# Si ya usas migraciones, aplica pendientes (incluye catálogos de vehículos):
+alembic upgrade head
+
 # Sembrar datos iniciales (admin@redline.com / Admin123*):
 python3 -m app.db.seed_auth
+
+# Sembrar catálogos de vehículos (marcas, modelos, tipos, combustibles, etc.):
+python3 -m app.db.seed_catalogs
 ```
+
+Nota: al iniciar la API se ejecutan automáticamente seed_auth y seed_catalogs de forma idempotente.
 
 ### 4. Ejecutar servidor
 
