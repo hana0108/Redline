@@ -16,17 +16,29 @@ __pycache__/
 *$py.class
 
 # Entornos virtuales
+**[.]venv/
+**[.]deps
+**[.]env/
+**[.]ENV/
 .venv/
 venv/
-.deps
 env/
 ENV/
+.deps/
+backend/.deps/
 
 # Herramientas Python
 .python-version
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.pyre/
+.tox/
+.nox/
+.hypothesis/
+.ipynb_checkpoints/
+.cache/
+.eslintcache
 .coverage
 .coverage.*
 htmlcov/
@@ -38,10 +50,20 @@ pip-wheel-metadata/
 
 # Logs
 *.log
+*.pid
+*.pid.lock
 
 # =========================
 # FastAPI / backend local
 # =========================
+# Archivos de entorno (nunca versionar secretos)
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
 backend/.env
 backend/.env.*
 !backend/.env.example
@@ -55,6 +77,8 @@ tmp/
 temp/
 uploads/
 exports/
+media/
+backend/media/
 
 # =========================
 # Alembic / cache

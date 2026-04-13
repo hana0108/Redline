@@ -80,16 +80,16 @@
           <div class="grid two">
             <select id="vehicleBranch" required></select>
             <input id="vehicleVin" placeholder="VIN / Chasis" required />
-            <input id="vehicleBrand" placeholder="Marca" required />
-            <input id="vehicleModel" placeholder="Modelo" required />
+            <select id="vehicleBrand" required></select>
+            <select id="vehicleModel" required></select>
             <input id="vehicleYear" type="number" min="1900" max="2100" placeholder="Año" required />
             <input id="vehiclePrice" type="number" min="0" step="0.01" placeholder="Precio" required />
             <input id="vehicleMileage" type="number" min="0" placeholder="Millaje" />
             <input id="vehiclePlate" placeholder="Placa" />
-            <input id="vehicleColor" placeholder="Color" />
-            <input id="vehicleTransmission" placeholder="Transmisión" />
-            <input id="vehicleFuelType" placeholder="Combustible" />
-            <input id="vehicleType" placeholder="Tipo de vehículo" />
+            <select id="vehicleColor"></select>
+            <select id="vehicleTransmission"></select>
+            <select id="vehicleFuelType"></select>
+            <select id="vehicleType"></select>
           </div>
           <textarea id="vehicleDescription" placeholder="Descripción"></textarea>
           <div class="form-actions">
@@ -167,11 +167,11 @@
           <textarea id="clientNotes" placeholder="Notas del cliente"></textarea>
           <div class="subsection-title">Preferencias</div>
           <div class="grid two">
-            <input id="prefBrands" placeholder="Marcas preferidas (Toyota, Honda)" />
-            <input id="prefVehicleType" placeholder="Tipo de vehículo" />
-            <input id="prefTransmission" placeholder="Transmisión" />
-            <input id="prefFuelType" placeholder="Combustible" />
-            <input id="prefColor" placeholder="Color" />
+            <select id="prefBrands" multiple title="Marcas preferidas"></select>
+            <select id="prefVehicleType"></select>
+            <select id="prefTransmission"></select>
+            <select id="prefFuelType"></select>
+            <select id="prefColor"></select>
             <input id="prefPriceMin" type="number" min="0" step="0.01" placeholder="Precio mínimo" />
             <input id="prefPriceMax" type="number" min="0" step="0.01" placeholder="Precio máximo" />
           </div>
