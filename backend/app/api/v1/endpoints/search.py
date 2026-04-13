@@ -81,7 +81,7 @@ async def unified_search(
         str | None,
         Query(
             description="Limit search to specific entity type",
-            regex="^(vehicles|clients|sales|users)$",
+            pattern="^(vehicles|clients|sales|users)$",
         ),
     ] = None,
     limit_per_type: Annotated[int, Query(description="Results per entity type", ge=1, le=50)] = 10,
@@ -97,7 +97,7 @@ async def search_suggestions(
     db: Annotated[Session, Depends(get_db)],
     q: Annotated[str, Query(description="Partial search query", min_length=1, max_length=50)],
     entity_type: Annotated[
-        str | None, Query(description="Entity type for suggestions", regex="^(vehicles|clients)$")
+        str | None, Query(description="Entity type for suggestions", pattern="^(vehicles|clients)$")
     ] = None,
     limit: Annotated[int, Query(description="Number of suggestions", ge=1, le=20)] = 10,
 ) -> dict:

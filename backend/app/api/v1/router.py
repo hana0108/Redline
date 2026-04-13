@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     branches,
     bulk,
     cache,
+    catalogs,
     clients,
     documents,
     health,
@@ -30,5 +31,6 @@ api_router.include_router(bulk.router)
 api_router.include_router(health.router)
 api_router.include_router(search.router)
 api_router.include_router(cache.router)
+api_router.include_router(catalogs.router)
 api_router.include_router(settings.router)
 api_router.include_router(reports.router)
