@@ -238,13 +238,29 @@ async function loadBranches() {
   setText('metricBranches', String(BRANCHES.length));
 
   el('branchList').innerHTML = BRANCHES.length
-    ? BRANCHES.map(branch => `
-      <div class="list-item">
-        <strong>${escapeHtml(branch.name)}</strong>
-        <div class="muted">${escapeHtml(branch.address || 'Sin dirección')} · ${escapeHtml(branch.phone || 'Sin teléfono')}</div>
-        <div class="muted">Estado: ${escapeHtml(branch.status)}</div>
-      </div>
-    `).join('')
+    ? BRANCHES.map(branch => {
+        const isActive = branch.status === 'active';
+        return `
+          <div class="entity-card">
+            <div class="entity-card-header">
+              <div>
+                <h4>${escapeHtml(branch.name)}</h4>
+                <span class="badge ${isActive ? 'available' : 'other'}">${isActive ? 'Activa' : 'Inactiva'}</span>
+              </div>
+            </div>
+            <div class="muted" style="font-size:13px; margin: 6px 0 10px;">
+              ${escapeHtml(branch.address || 'Sin dirección')}
+              ${branch.phone ? ` · ${escapeHtml(branch.phone)}` : ''}
+              ${branch.email ? ` · ${escapeHtml(branch.email)}` : ''}
+            </div>
+            <div class="entity-actions">
+              <button class="btn secondary small" data-action="edit-branch" data-id="${branch.id}">Editar</button>
+              <button class="btn ${isActive ? 'warning' : 'success'} small" data-action="toggle-branch" data-id="${branch.id}">${isActive ? 'Desactivar' : 'Activar'}</button>
+              <button class="btn danger small" data-action="delete-branch" data-id="${branch.id}">Eliminar</button>
+            </div>
+          </div>
+        `;
+      }).join('')
     : '<div class="muted">No hay sucursales registradas todavía.</div>';
 
   syncSharedSelects();
@@ -567,21 +583,47 @@ async function openImagesPanel(vehicle) {
 
 async function handleBranchSubmit(evt) {
   evt.preventDefault();
+  const branchId = el('branchId').value;
   const payload = {
     name: el('branchName').value.trim(),
     phone: el('branchPhone').value.trim() || null,
     email: el('branchEmail').value.trim() || null,
     address: el('branchAddress').value.trim() || null,
   };
-  showMessage('branchFormStatus', 'Guardando sucursal...');
+  showMessage('branchFormStatus', branchId ? 'Actualizando sucursal...' : 'Guardando sucursal...');
   try {
-    await window.REDLINE.request('/branches', { method: 'POST', json: payload });
-    el('branchForm').reset();
-    showMessage('branchFormStatus', 'Sucursal creada correctamente.');
+    if (branchId) {
+      await window.REDLINE.request(`/branches/${branchId}`, { method: 'PATCH', json: payload });
+      showMessage('branchFormStatus', 'Sucursal actualizada correctamente.');
+    } else {
+      await window.REDLINE.request('/branches', { method: 'POST', json: payload });
+      showMessage('branchFormStatus', 'Sucursal creada correctamente.');
+    }
+    resetBranchForm();
     await loadBranches();
   } catch (error) {
     showMessage('branchFormStatus', error.message, true);
   }
+}
+
+function fillBranchForm(branch) {
+  el('branchId').value = branch.id;
+  el('branchName').value = branch.name;
+  el('branchPhone').value = branch.phone || '';
+  el('branchEmail').value = branch.email || '';
+  el('branchAddress').value = branch.address || '';
+  setText('branchFormTitle', 'Editar sucursal');
+  el('branchSubmitBtn').textContent = 'Guardar cambios';
+  el('branchFormStatus').textContent = '';
+  window.scrollTo({ top: el('sectionBranches').offsetTop - 20, behavior: 'smooth' });
+}
+
+function resetBranchForm() {
+  el('branchId').value = '';
+  el('branchForm').reset();
+  setText('branchFormTitle', 'Nueva sucursal');
+  el('branchSubmitBtn').textContent = 'Crear sucursal';
+  el('branchFormStatus').textContent = '';
 }
 
 async function handleVehicleSubmit(evt) {
@@ -750,6 +792,25 @@ async function handleMainClick(evt) {
   const action = button.dataset.action;
   const id = button.dataset.id;
   try {
+    if (action === 'edit-branch') {
+      const branch = BRANCHES.find(item => item.id === id);
+      if (branch) fillBranchForm(branch);
+      return;
+    }
+    if (action === 'toggle-branch') {
+      const branch = BRANCHES.find(item => item.id === id);
+      if (!branch) return;
+      const newStatus = branch.status === 'active' ? 'inactive' : 'active';
+      await window.REDLINE.request(`/branches/${id}`, { method: 'PATCH', json: { status: newStatus } });
+      await loadBranches();
+      return;
+    }
+    if (action === 'delete-branch') {
+      if (!askConfirmation('¿Eliminar esta sucursal? Solo es posible si no tiene vehículos ni ventas asociadas.')) return;
+      await window.REDLINE.request(`/branches/${id}`, { method: 'DELETE' });
+      await loadBranches();
+      return;
+    }
     if (action === 'edit-vehicle') {
       const vehicle = VEHICLES.find(item => item.id === id);
       if (vehicle) fillVehicleForm(vehicle);
@@ -851,6 +912,7 @@ function wireUi() {
   el('resetVehicleBtn').addEventListener('click', resetVehicleForm);
   el('resetClientBtn').addEventListener('click', resetClientForm);
   el('resetSaleBtn').addEventListener('click', resetSaleForm);
+  el('resetBranchBtn').addEventListener('click', resetBranchForm);
 
   el('vehicleSearch').addEventListener('input', renderVehicles);
   el('vehicleStatusFilter').addEventListener('change', renderVehicles);

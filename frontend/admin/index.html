@@ -37,17 +37,21 @@
     </section>
 
     <section id="sectionBranches" class="grid two-columns-equal">
-      <div class="card">
+      <div class="card sticky-card">
         <div class="card-head">
-          <h3>Sucursales</h3>
-          <span class="muted">Crea una sucursal antes de registrar vehículos.</span>
+          <h3 id="branchFormTitle">Nueva sucursal</h3>
+          <span class="muted">Registra y gestiona tus puntos de venta.</span>
         </div>
+        <input type="hidden" id="branchId" />
         <form id="branchForm" class="stack-form compact">
           <input id="branchName" placeholder="Nombre de sucursal" required />
           <input id="branchPhone" placeholder="Teléfono" />
           <input id="branchEmail" type="email" placeholder="Email" />
           <textarea id="branchAddress" placeholder="Dirección"></textarea>
-          <button class="btn primary" type="submit">Crear sucursal</button>
+          <div class="form-actions">
+            <button class="btn primary" type="submit" id="branchSubmitBtn">Crear sucursal</button>
+            <button class="btn secondary" type="button" id="resetBranchBtn">Limpiar</button>
+          </div>
           <div id="branchFormStatus" class="status-line"></div>
         </form>
       </div>
