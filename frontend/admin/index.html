@@ -239,29 +239,53 @@
   </main>
 
   <!-- Modal de imágenes -->
-  <div id="imagesModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="imagesTitle">
+  <div id="imagesModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="imagesTitleText">
     <div class="admin-modal-panel">
-      <div class="card-head space-between">
+
+      <!-- Header -->
+      <div class="admin-modal-header">
         <div>
-          <h3>Imágenes del vehículo</h3>
+          <h3 id="imagesTitleText">Imágenes del vehículo</h3>
           <span id="imagesTitle" class="muted"></span>
         </div>
-        <button id="closeImagesPanel" class="btn secondary small">✕ Cerrar</button>
+        <button id="closeImagesPanel" class="btn secondary small" aria-label="Cerrar">✕</button>
       </div>
-      <form id="imageUploadForm" class="inline-form">
-        <input type="file" id="imageFile" accept="image/*" required />
-        <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
-        <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
-        <button class="btn primary" type="submit">Subir imagen</button>
-      </form>
-      <form id="imageUrlForm" class="inline-form" style="margin-top: 12px;">
-        <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
-        <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
-        <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
-        <button class="btn secondary" type="submit">Usar URL</button>
-      </form>
+
+      <!-- Upload area -->
+      <div class="images-modal-upload">
+        <div class="images-upload-block">
+          <p class="images-upload-label">Subir archivo</p>
+          <form id="imageUploadForm" class="stack-form compact">
+            <input type="file" id="imageFile" accept="image/*" required />
+            <div class="grid two">
+              <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
+              <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
+            </div>
+            <button class="btn primary" type="submit">Subir imagen</button>
+          </form>
+        </div>
+        <div class="images-upload-divider">o</div>
+        <div class="images-upload-block">
+          <p class="images-upload-label">Usar URL externa</p>
+          <form id="imageUrlForm" class="stack-form compact">
+            <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
+            <div class="grid two">
+              <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
+              <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
+            </div>
+            <button class="btn secondary" type="submit">Guardar URL</button>
+          </form>
+        </div>
+      </div>
+
       <div id="imageUploadStatus" class="status-line"></div>
-      <div id="imagesList" class="image-grid" style="margin-top: 16px;"></div>
+
+      <!-- Existing images -->
+      <div class="images-modal-gallery-head">
+        <span class="subsection-title">Imágenes cargadas</span>
+      </div>
+      <div id="imagesList" class="image-grid"></div>
+
     </div>
   </div>
 
