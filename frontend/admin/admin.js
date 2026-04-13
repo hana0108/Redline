@@ -559,9 +559,9 @@ async function refreshImages() {
 
 async function openImagesPanel(vehicle) {
   ACTIVE_IMAGES_VEHICLE_ID = vehicle.id;
-  el('imagesPanel').classList.remove('hidden');
+  el('imagesModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
   setText('imagesTitle', `${vehicle.brand} ${vehicle.model} · ${vehicle.vin}`);
-  el('imagesPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   await refreshImages();
 }
 
@@ -880,9 +880,18 @@ function wireUi() {
   document.body.addEventListener('click', handleMainClick);
   document.body.addEventListener('change', handleMainChange);
   el('imagesList').addEventListener('click', handleImageActions);
-  el('closeImagesPanel').addEventListener('click', () => {
-    el('imagesPanel').classList.add('hidden');
+
+  function closeImagesModal() {
+    el('imagesModal').classList.add('hidden');
+    document.body.style.overflow = '';
     ACTIVE_IMAGES_VEHICLE_ID = null;
+  }
+  el('closeImagesPanel').addEventListener('click', closeImagesModal);
+  el('imagesModal').addEventListener('click', (evt) => {
+    if (evt.target === el('imagesModal')) closeImagesModal();
+  });
+  document.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Escape' && !el('imagesModal').classList.contains('hidden')) closeImagesModal();
   });
 }
 

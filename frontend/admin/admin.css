@@ -311,6 +311,30 @@ textarea { min-height: 110px; resize: vertical; }
   color: var(--muted);
 }
 .hidden { display: none; }
+
+/* ── Images modal ─────────────────────────────────── */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.admin-modal-overlay.hidden { display: none; }
+.admin-modal-panel {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.3);
+}
 .sticky-card {
   position: sticky;
   top: 20px;

@@ -115,30 +115,6 @@
       </div>
     </section>
 
-    <section class="card hidden" id="imagesPanel">
-      <div class="card-head space-between">
-        <div>
-          <h3>Imágenes del vehículo</h3>
-          <span id="imagesTitle" class="muted"></span>
-        </div>
-        <button id="closeImagesPanel" class="btn secondary">Cerrar</button>
-      </div>
-      <form id="imageUploadForm" class="inline-form">
-        <input type="file" id="imageFile" accept="image/*" required />
-        <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
-        <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
-        <button class="btn primary" type="submit">Subir imagen</button>
-      </form>
-      <form id="imageUrlForm" class="inline-form" style="margin-top: 12px;">
-        <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
-        <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
-        <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
-        <button class="btn secondary" type="submit">Usar URL</button>
-      </form>
-      <div id="imageUploadStatus" class="status-line"></div>
-      <div id="imagesList" class="image-grid"></div>
-    </section>
-
     <section id="sectionClients" class="grid two-columns-equal">
       <div class="card sticky-card">
         <div class="card-head">
@@ -261,6 +237,33 @@
       </div>
     </section>
   </main>
+
+  <!-- Modal de imágenes -->
+  <div id="imagesModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="imagesTitle">
+    <div class="admin-modal-panel">
+      <div class="card-head space-between">
+        <div>
+          <h3>Imágenes del vehículo</h3>
+          <span id="imagesTitle" class="muted"></span>
+        </div>
+        <button id="closeImagesPanel" class="btn secondary small">✕ Cerrar</button>
+      </div>
+      <form id="imageUploadForm" class="inline-form">
+        <input type="file" id="imageFile" accept="image/*" required />
+        <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
+        <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
+        <button class="btn primary" type="submit">Subir imagen</button>
+      </form>
+      <form id="imageUrlForm" class="inline-form" style="margin-top: 12px;">
+        <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
+        <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
+        <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
+        <button class="btn secondary" type="submit">Usar URL</button>
+      </form>
+      <div id="imageUploadStatus" class="status-line"></div>
+      <div id="imagesList" class="image-grid" style="margin-top: 16px;"></div>
+    </div>
+  </div>
 
   <script src="../api.js"></script>
   <script src="admin.js"></script>
