@@ -185,10 +185,17 @@ CREATE TABLE IF NOT EXISTS redline.vehicle_models_catalog (
     name varchar(150) NOT NULL,
     sort_order integer NOT NULL DEFAULT 0,
     is_active boolean NOT NULL DEFAULT true,
+    default_vehicle_type varchar(50),
+    default_transmission varchar(50),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT uq_vehicle_models_catalog_brand_code UNIQUE (brand_id, code)
 );
+
+-- Idempotent: add hint columns on existing installations
+ALTER TABLE redline.vehicle_models_catalog
+    ADD COLUMN IF NOT EXISTS default_vehicle_type varchar(50),
+    ADD COLUMN IF NOT EXISTS default_transmission varchar(50);
 
 CREATE INDEX IF NOT EXISTS idx_vehicle_models_catalog_brand_active_sort ON redline.vehicle_models_catalog(brand_id, is_active, sort_order);
 

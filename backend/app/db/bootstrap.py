@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from app.core.config import settings
 from app.db.seed_auth import run as seed_auth_run
@@ -51,6 +51,26 @@ def _schema_ready() -> bool:
     )
 
 
+def _ensure_model_catalog_columns() -> None:
+    """Idempotently add hint columns to vehicle_models_catalog on existing DBs."""
+    schema = settings.DATABASE_SCHEMA
+    inspector = inspect(engine)
+    cols = {c["name"] for c in inspector.get_columns("vehicle_models_catalog", schema=schema)}
+    stmts = []
+    if "default_vehicle_type" not in cols:
+        stmts.append(
+            "ALTER TABLE vehicle_models_catalog ADD COLUMN default_vehicle_type varchar(50)"
+        )
+    if "default_transmission" not in cols:
+        stmts.append(
+            "ALTER TABLE vehicle_models_catalog ADD COLUMN default_transmission varchar(50)"
+        )
+    if stmts:
+        with engine.begin() as conn:
+            for stmt in stmts:
+                conn.execute(text(stmt))
+
+
 def bootstrap_database() -> None:
     root = _project_root()
     schema_sql = root / "database" / "redline_schema.sql"
@@ -58,8 +78,16 @@ def bootstrap_database() -> None:
 
     if not _schema_ready():
         _execute_sql_file(schema_sql)
+    else:
+        # Schema already exists — ensure new columns are present
+        _ensure_model_catalog_columns()
 
     seed_auth_run()
 
     if vehicle_catalogs_seed_sql.exists():
         _execute_sql_file(vehicle_catalogs_seed_sql)
+
+    # Demo seed — idempotent, skips if data already exists
+    from app.db.seed_demo import run as seed_demo_run  # noqa: PLC0415
+
+    seed_demo_run()

@@ -94,7 +94,16 @@ def get_vehicle_models(
             )
         query = query.order_by(VehicleModelCatalog.sort_order.asc(), VehicleModelCatalog.name.asc())
         rows = db.scalars(query).all()
-        return _catalog_to_items(list(rows))
+        return [
+            {
+                "code": r.code,
+                "name": r.name,
+                "sort_order": r.sort_order,
+                "default_vehicle_type": r.default_vehicle_type,
+                "default_transmission": r.default_transmission,
+            }
+            for r in rows
+        ]
 
     # Fallback: distinct model values from vehicles
     q = select(distinct(Vehicle.model)).where(Vehicle.model.is_not(None))

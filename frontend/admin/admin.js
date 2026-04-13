@@ -7,6 +7,7 @@ let VEHICLES = [];
 let CLIENTS = [];
 let SALES = [];
 let CATALOGS = { brands: [], vehicle_types: [], fuel_types: [], transmissions: [], colors: [] };
+let VEHICLE_MODELS = [];
 let ACTIVE_IMAGES_VEHICLE_ID = null;
 
 const STATUS_LABELS = {
@@ -129,15 +130,18 @@ function populateCatalogSelect(id, items, placeholder, selectedValue = '') {
 async function loadVehicleModels(brandName, selectedModel = '') {
   if (!brandName) {
     populateCatalogSelect('vehicleModel', [], 'Modelo');
+    VEHICLE_MODELS = [];
     return;
   }
   try {
     const models = await window.REDLINE.request(
       `/catalogs/vehicle-models?brand_code=${encodeURIComponent(brandName)}`
     );
+    VEHICLE_MODELS = models;
     populateCatalogSelect('vehicleModel', models, 'Modelo', selectedModel);
   } catch (_) {
     populateCatalogSelect('vehicleModel', [], 'Modelo');
+    VEHICLE_MODELS = [];
   }
 }
 
@@ -846,6 +850,17 @@ function wireUi() {
 
   el('vehicleBrand').addEventListener('change', (evt) => {
     loadVehicleModels(evt.target.value).catch(() => {});
+  });
+
+  el('vehicleModel').addEventListener('change', (evt) => {
+    const selected = VEHICLE_MODELS.find((m) => m.name === evt.target.value);
+    if (!selected) return;
+    if (selected.default_vehicle_type) {
+      el('vehicleType').value = selected.default_vehicle_type;
+    }
+    if (selected.default_transmission) {
+      el('vehicleTransmission').value = selected.default_transmission;
+    }
   });
 
   el('refreshVehiclesBtn').addEventListener('click', loadVehicles);

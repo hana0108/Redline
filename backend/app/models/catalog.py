@@ -40,6 +40,8 @@ class VehicleModelCatalog(Base):
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    default_vehicle_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    default_transmission: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     brand: Mapped[VehicleBrand] = relationship("VehicleBrand", back_populates="models")
 
