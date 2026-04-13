@@ -40,7 +40,35 @@ function showMessage(id, message, isError = false) {
   const node = el(id);
   if (!node) return;
   node.textContent = message || '';
-  node.style.color = isError ? '#b11b17' : '#67717c';
+  if (!message) {
+    node.style.color = '';
+  } else if (isError) {
+    node.style.color = '#b11b17';
+    toast(message, 'error');
+  } else if (!message.endsWith('...')) {
+    node.style.color = '#0d7e46';
+    toast(message, 'success');
+  } else {
+    node.style.color = '#67717c';
+  }
+}
+
+function toast(message, type = 'info') {
+  let container = el('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    document.body.appendChild(container);
+  }
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = message;
+  container.appendChild(t);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('toast-visible')));
+  setTimeout(() => {
+    t.classList.remove('toast-visible');
+    setTimeout(() => { if (t.parentNode) t.remove(); }, 300);
+  }, 3800);
 }
 
 function escapeHtml(value) {
@@ -286,26 +314,24 @@ function vehicleCard(vehicle) {
   const img = window.REDLINE.pickCoverImage(vehicle) || 'https://via.placeholder.com/800x450?text=Sin+imagen';
   return `
     <article class="vehicle-card">
-      <img src="${escapeHtml(img)}" alt="${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}" />
+      <div class="vehicle-img-wrap">
+        <img src="${escapeHtml(img)}" alt="${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}" loading="lazy" />
+        <span class="vehicle-status-overlay badge ${badgeClass(vehicle.status)}">${escapeHtml(STATUS_LABELS[vehicle.status] || vehicle.status)}</span>
+      </div>
       <div>
         <div class="entity-card-header">
           <div>
-            <h4>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h4>
-            <div class="muted">VIN: ${escapeHtml(vehicle.vin)} · Placa: ${escapeHtml(vehicle.plate || 'N/D')} · ${escapeHtml(getBranchName(vehicle.branch_id))}</div>
-          </div>
-          <div class="entity-actions">
-            <span class="badge ${badgeClass(vehicle.status)}">${escapeHtml(STATUS_LABELS[vehicle.status] || vehicle.status)}</span>
+            <h4>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)} <small class="muted" style="font-size:14px;font-weight:500">${vehicle.vehicle_year}</small></h4>
+            <div class="muted" style="font-size:13px">VIN: ${escapeHtml(vehicle.vin)} &middot; Placa: ${escapeHtml(vehicle.plate || 'N/D')} &middot; ${escapeHtml(getBranchName(vehicle.branch_id))}</div>
           </div>
         </div>
+        <div class="vehicle-price">${window.REDLINE.formatCurrencyRD(vehicle.price)}</div>
         <div class="meta-grid">
-          <div class="meta-pill">Año: ${vehicle.vehicle_year}</div>
-          <div class="meta-pill">Precio: ${window.REDLINE.formatCurrencyRD(vehicle.price)}</div>
-          <div class="meta-pill">Millaje: ${vehicle.mileage || 0}</div>
-          <div class="meta-pill">Color: ${escapeHtml(vehicle.color || 'N/D')}</div>
-          <div class="meta-pill">Transmisión: ${escapeHtml(vehicle.transmission || 'N/D')}</div>
-          <div class="meta-pill">Combustible: ${escapeHtml(vehicle.fuel_type || 'N/D')}</div>
+          <div class="meta-pill">${(vehicle.mileage || 0).toLocaleString('es-DO')} km</div>
+          <div class="meta-pill">${escapeHtml(vehicle.transmission || 'N/D')}</div>
+          <div class="meta-pill">${escapeHtml(vehicle.fuel_type || 'N/D')}</div>
+          <div class="meta-pill">${escapeHtml(vehicle.color || 'N/D')}</div>
         </div>
-        <p class="muted">${escapeHtml(vehicle.description || 'Sin descripción.')}</p>
         <div class="vehicle-actions">
           <button class="btn secondary small" data-action="edit-vehicle" data-id="${vehicle.id}">Editar</button>
           <button class="btn secondary small" data-action="images" data-id="${vehicle.id}">Imágenes</button>
@@ -339,35 +365,8 @@ function renderVehicles() {
 function renderReserved() {
   const reserved = VEHICLES.filter(v => v.status === 'reservado');
   el('reservedList').innerHTML = reserved.length
-    ? reserved.map(vehicle => {
-        const img = window.REDLINE.pickCoverImage(vehicle) || 'https://via.placeholder.com/800x450?text=Sin+imagen';
-        return `
-          <article class="vehicle-card">
-            <img src="${escapeHtml(img)}" alt="${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}" />
-            <div>
-              <div class="entity-card-header">
-                <div>
-                  <h4>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h4>
-                  <div class="muted">VIN: ${escapeHtml(vehicle.vin)} · ${escapeHtml(getBranchName(vehicle.branch_id))}</div>
-                </div>
-                <span class="badge warning">Reservado</span>
-              </div>
-              <div class="meta-grid">
-                <div class="meta-pill">Año: ${vehicle.vehicle_year}</div>
-                <div class="meta-pill">Precio: ${window.REDLINE.formatCurrencyRD(vehicle.price)}</div>
-                <div class="meta-pill">Millaje: ${vehicle.mileage || 0}</div>
-              </div>
-              <div class="vehicle-actions">
-                <button class="btn secondary small" data-action="edit-vehicle" data-id="${vehicle.id}">Editar</button>
-                <select class="status-select" data-action="status" data-id="${vehicle.id}">
-                  ${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${vehicle.status === value ? 'selected' : ''}>${label}</option>`).join('')}
-                </select>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join('')
-    : '<div class="muted" style="padding: 12px 0;">No hay vehículos reservados actualmente.</div>';
+    ? reserved.map(vehicleCard).join('')
+    : '<div class="muted" style="padding: 28px 0; text-align: center;">No hay vehículos reservados actualmente.</div>';
 }
 
 function renderSalesHistory() {
@@ -950,7 +949,7 @@ async function handleMainClick(evt) {
       return;
     }
   } catch (error) {
-    alert(error.message);
+    toast(error.message, 'error');
   }
 }
 
@@ -965,7 +964,7 @@ async function handleMainChange(evt) {
       return;
     }
   } catch (error) {
-    alert(error.message);
+    toast(error.message, 'error');
   }
 }
 
@@ -1074,7 +1073,7 @@ async function bootstrap() {
       window.location.href = '../login/index.html';
       return;
     }
-    alert(`No se pudo cargar el panel: ${error.message}`);
+    toast(`No se pudo cargar el panel: ${error.message}`, 'error');
   }
 }
 
