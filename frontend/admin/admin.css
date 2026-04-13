@@ -9,9 +9,11 @@
   --line: #e5e7eb;
   --green: #0f9d58;
   --amber: #c98a07;
+  --blue: #4f6ef7;
+  --purple: #8b5cf6;
+  --pill-bg: #f3f6f9;
   --shadow-sm: 0 2px 6px rgba(20,20,20,.05);
   --shadow-md: 0 8px 24px rgba(20,20,20,.08);
-  --shadow-lg: 0 24px 56px rgba(20,20,20,.16);
   --transition: .15s ease;
 }
 * { box-sizing: border-box; }
@@ -49,22 +51,6 @@ body {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-}
-.api-box {
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.12);
-  padding: 12px;
-  border-radius: 12px;
-  min-width: 340px;
-}
-.api-box label {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 8px;
-}
-.api-row {
-  display: flex;
-  gap: 8px;
 }
 .api-row input { flex: 1; }
 .admin-layout {
@@ -111,10 +97,10 @@ body {
 }
 .metrics > div:hover { box-shadow: var(--shadow-md); }
 .metrics > div:nth-child(1) { border-left-color: var(--red); }
-.metrics > div:nth-child(2) { border-left-color: #4f6ef7; }
+.metrics > div:nth-child(2) { border-left-color: var(--blue); }
 .metrics > div:nth-child(3) { border-left-color: var(--green); }
 .metrics > div:nth-child(4) { border-left-color: var(--amber); }
-.metrics > div:nth-child(5) { border-left-color: #8b5cf6; }
+.metrics > div:nth-child(5) { border-left-color: var(--purple); }
 .quick-nav {
   display: flex;
   gap: 8px;
@@ -180,7 +166,7 @@ textarea, input, select {
   font: inherit;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-textarea:focus, input:focus, select:focus {
+textarea:focus-visible, input:focus-visible, select:focus-visible {
   outline: none;
   border-color: var(--red);
   box-shadow: 0 0 0 3px rgba(218,37,32,.10);
@@ -332,7 +318,7 @@ textarea { min-height: 110px; resize: vertical; }
   font-size: 12px;
   font-weight: 600;
 }
-.meta-pill { background: #f3f6f9; }
+.meta-pill { background: var(--pill-bg); }
 .badge.available { background: rgba(15,157,88,.12); color: #0d7e46; }
 .badge.other { background: rgba(218,37,32,.12); color: #b11b17; }
 .badge.warning { background: rgba(201,138,7,.12); color: #9a6700; }
@@ -524,6 +510,47 @@ textarea { min-height: 110px; resize: vertical; }
 .toast-success { background: #1a4731; }
 .toast-error   { background: #5c1010; }
 .toast-info    { background: var(--black); }
+
+/* ── App loading overlay ─────────────────── */
+.app-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--black);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+}
+.app-loading-overlay.hidden { display: none; }
+.app-loading-overlay p { margin: 0; opacity: .75; }
+.spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(255,255,255,.15);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Confirm dialog ────────────────────── */
+.confirm-panel { max-width: 420px; }
+.confirm-message {
+  margin: 0 0 24px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
 
 @media (max-width: 1300px) {
   .metrics-extended { grid-template-columns: repeat(4, minmax(0, 1fr)); }

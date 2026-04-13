@@ -1,10 +1,11 @@
 :root {
-  --bg: #f2f1ec;
   --surface: #ffffff;
   --ink: #121212;
   --muted: #5f646d;
   --brand: #da2520;
   --brand-dark: #9b1d1d;
+  --accent: #fca311;
+  --surface-dark: #2f3540;
   --line: #ded8ce;
   --radius: 14px;
   --shadow: 0 10px 30px rgba(15, 18, 23, 0.08);
@@ -148,7 +149,7 @@ nav a.active {
   text-transform: uppercase;
   letter-spacing: 2px;
   font-size: 12px;
-  color: #fca311;
+  color: var(--accent);
 }
 
 .hero h2 {
@@ -203,9 +204,7 @@ nav a.active {
 }
 
 .field input,
-.field select,
-.api-box input,
-.api-box select {
+.field select {
   width: 100%;
   border: 1px solid #c9c1b4;
   border-radius: 10px;
@@ -239,32 +238,13 @@ nav a.active {
 
 .btn-secondary {
   margin-top: 8px;
-  background: #2f3540;
+  background: var(--surface-dark);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
-}
-
-.api-box {
-  margin-top: 18px;
-  border-top: 1px dashed var(--line);
-  padding-top: 14px;
-}
-
-.api-box label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.api-box small {
-  display: block;
-  margin-top: 8px;
-  color: var(--muted);
 }
 
 .list-head {
@@ -386,8 +366,26 @@ nav a.active {
   border: 0;
   background: transparent;
   color: #666;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s ease, color .15s ease;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, .08);
+  color: #111;
+}
+
+.close-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 .modal-image {
@@ -445,6 +443,68 @@ nav a.active {
   flex: 1;
   margin-top: 0;
 }
+
+/* ── Toast notifications ────────────────── */
+#toastContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-width: 360px;
+  width: calc(100% - 48px);
+}
+
+.toast {
+  padding: 13px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .22);
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: auto;
+  line-height: 1.4;
+}
+
+.toast.toast-visible { opacity: 1; transform: translateX(0); }
+.toast-success { background: #1a4731; }
+.toast-error   { background: #5c1010; }
+.toast-info    { background: #1c1d21; }
+
+/* ── Skeleton loading ──────────────────── */
+.vehicle-skeleton {
+  background: #e8e4dd;
+  border-radius: var(--radius);
+  height: 260px;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .45; }
+}
+
+/* ── Status badges ────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  margin-bottom: 4px;
+}
+
+.badge--disponible { background: rgba(15, 157, 88, .12);  color: #0d7e46; }
+.badge--reservado  { background: rgba(201, 138, 7, .12);  color: #9a6700; }
+.badge--en_proceso { background: rgba(79, 110, 247, .12); color: #2b4bd6; }
 
 @media (max-width: 920px) {
   .layout {

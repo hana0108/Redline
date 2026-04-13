@@ -25,17 +25,17 @@
       <div><p class="metric-label">Sucursales</p><h2 id="metricBranches">0</h2></div>
       <div><p class="metric-label">Clientes</p><h2 id="metricClients">0</h2></div>
       <div><p class="metric-label">Ventas</p><h2 id="metricSales">0</h2></div>
-      <div><p class="metric-label">Permisos</p><h2 id="metricPermissions">0</h2></div>
+      <div><p class="metric-label">Usuarios</p><h2 id="metricPermissions">0</h2></div>
     </section>
 
     <section class="card quick-nav">
-      <a href="#sectionBranches">Sucursales</a>
-      <a href="#sectionVehicles">Inventario</a>
-      <a href="#sectionReserved">Reservados</a>
-      <a href="#sectionClients">Clientes</a>
-      <a href="#sectionSales">Ventas</a>
-      <a href="#sectionSalesHistory">Historial</a>
-      <a href="#sectionSettings">Configuración</a>
+      <a href="#sectionBranches">🏢 Sucursales</a>
+      <a href="#sectionVehicles">🚗 Inventario</a>
+      <a href="#sectionReserved">🔖 Reservados</a>
+      <a href="#sectionClients">👥 Clientes</a>
+      <a href="#sectionSales">💰 Ventas</a>
+      <a href="#sectionSalesHistory">📊 Historial</a>
+      <a href="#sectionSettings">⚙️ Configuración</a>
     </section>
 
     <section id="sectionBranches" class="grid two-columns-equal">
@@ -246,7 +246,7 @@
       <div id="salesHistoryList" class="list-grid scrollable-list"></div>
     </section>
 
-    <section id="sectionSettings" class="grid two-columns-equal">
+    <section id="sectionSettings">
       <div class="card sticky-card">
         <div class="card-head">
           <h3>Configuración general</h3>
@@ -325,6 +325,25 @@
 
     </div>
   </div>
+
+  <!-- Loading overlay -->
+  <div id="appLoadingOverlay" class="app-loading-overlay" aria-live="polite">
+    <div class="spinner"></div>
+    <p>Cargando panel...</p>
+  </div>
+
+  <!-- Custom confirm dialog -->
+  <div id="confirmModal" class="admin-modal-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirmModalText">
+    <div class="admin-modal-panel confirm-panel">
+      <p id="confirmModalText" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirmCancelBtn" class="btn secondary">Cancelar</button>
+        <button id="confirmOkBtn" class="btn danger">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer"></div>
 
   <script src="../api.js"></script>
   <script src="admin.js"></script>

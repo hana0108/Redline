@@ -3,6 +3,8 @@ const state = {
   vehicles: [],
 };
 
+let searchTimer;
+
 function el(id) {
   return document.getElementById(id);
 }
@@ -20,6 +22,20 @@ function formatNumber(value) {
   const num = Number(value);
   if (Number.isNaN(num)) return 'N/D';
   return num.toLocaleString('es-DO');
+}
+
+function toast(message, type = 'info') {
+  const container = el('toastContainer');
+  if (!container) return;
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = message;
+  container.appendChild(t);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('toast-visible')));
+  setTimeout(() => {
+    t.classList.remove('toast-visible');
+    setTimeout(() => { if (t.parentNode) t.remove(); }, 300);
+  }, 3800);
 }
 
 function vehicleImage(vehicle) {
@@ -44,12 +60,17 @@ async function loadBranches() {
   ].join('');
 }
 
+const STATUS_LABELS_PUB = { reservado: 'Reservado', en_proceso: 'En proceso' };
+
 function vehicleCard(vehicle) {
+  const statusLabel = STATUS_LABELS_PUB[vehicle.status];
+  const badge = statusLabel ? `<span class="badge badge--${escapeHtml(vehicle.status)}">${statusLabel}</span>` : '';
   return `
     <article class="vehicle-card" data-id="${vehicle.id}">
       <img src="${escapeHtml(vehicleImage(vehicle))}" alt="${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}" />
       <div class="vehicle-body">
         <h4>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}</h4>
+        ${badge}
         <p class="vehicle-price">${window.REDLINE.formatCurrencyRD(vehicle.price)}</p>
         <p class="vehicle-branch">Sucursal: ${escapeHtml(vehicle.branch_name || 'N/D')}</p>
         <div class="vehicle-meta">
@@ -81,9 +102,18 @@ async function loadVehicles() {
   if (search) params.set('search', search);
   if (status) params.set('status', status);
 
+  const grid = el('vehicleGrid');
+  grid.innerHTML = Array(6).fill('<div class="vehicle-skeleton"></div>').join('');
+  el('resultCount').textContent = 'Cargando...';
+
   const path = `/vehicles/public${params.toString() ? `?${params.toString()}` : ''}`;
-  state.vehicles = await window.REDLINE.request(path);
-  renderVehicles();
+  try {
+    state.vehicles = await window.REDLINE.request(path);
+    renderVehicles();
+  } catch (_) {
+    grid.innerHTML = '<div class="empty-state">No se pudo cargar el inventario. Intente de nuevo.</div>';
+    el('resultCount').textContent = '0 resultados';
+  }
 }
 
 function fillModal(vehicle) {
@@ -108,10 +138,14 @@ function fillModal(vehicle) {
 }
 
 async function openVehicleModal(vehicleId) {
-  const vehicle = await window.REDLINE.request(`/vehicles/public/${vehicleId}`);
-  fillModal(vehicle);
-  el('vehicleModal').style.display = 'grid';
-  el('vehicleModal').setAttribute('aria-hidden', 'false');
+  try {
+    const vehicle = await window.REDLINE.request(`/vehicles/public/${vehicleId}`);
+    fillModal(vehicle);
+    el('vehicleModal').style.display = 'grid';
+    el('vehicleModal').setAttribute('aria-hidden', 'false');
+  } catch (_) {
+    toast('No se pudo cargar el detalle del vehículo.', 'error');
+  }
 }
 
 function closeModal() {
@@ -124,8 +158,8 @@ function wireEvents() {
   el('branchFilter').addEventListener('change', loadVehicles);
   el('statusFilter').addEventListener('change', loadVehicles);
   el('searchInput').addEventListener('input', () => {
-    clearTimeout(window.__searchTimer);
-    window.__searchTimer = setTimeout(loadVehicles, 250);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadVehicles, 250);
   });
 
   el('vehicleGrid').addEventListener('click', async (evt) => {
@@ -153,7 +187,7 @@ function wireEvents() {
     } catch (e) {
       btn.textContent = 'Reservar';
       btn.disabled = false;
-      alert(e.message || 'No se pudo reservar el vehículo');
+      toast(e.message || 'No se pudo reservar el vehículo.', 'error');
     }
   });
 }

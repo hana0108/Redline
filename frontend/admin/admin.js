@@ -9,6 +9,7 @@ let SALES = [];
 let CATALOGS = { brands: [], vehicle_types: [], fuel_types: [], transmissions: [], colors: [] };
 let VEHICLE_MODELS = [];
 let ACTIVE_IMAGES_VEHICLE_ID = null;
+let _confirmResolve = null;
 
 const STATUS_LABELS = {
   disponible: 'Disponible',
@@ -22,6 +23,8 @@ const SALE_LABELS = {
   completada: 'Completada',
   anulada: 'Anulada',
 };
+
+const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect fill='%23eef2f6' width='800' height='450'/%3E%3Ctext fill='%2399a3ae' font-family='sans-serif' font-size='32' text-anchor='middle' x='400' y='225'%3ESin imagen%3C/text%3E%3C/svg%3E`;
 
 function ensureAuthenticated() {
   if (!window.REDLINE.getToken()) {
@@ -110,7 +113,11 @@ function badgeClass(kind) {
 }
 
 function askConfirmation(message) {
-  return window.confirm(message);
+  return new Promise((resolve) => {
+    _confirmResolve = resolve;
+    el('confirmModalText').textContent = message;
+    el('confirmModal').classList.remove('hidden');
+  });
 }
 
 function downloadBlob(blob, filename) {
@@ -262,7 +269,6 @@ async function loadCurrentUser() {
   const me = await window.REDLINE.request('/auth/me');
   CURRENT_USER = me;
   setText('welcomeText', `${me.full_name} · ${me.role} · ${me.email}`);
-  setText('metricPermissions', String((me.permissions || []).length));
 }
 
 async function loadUsers() {
@@ -271,10 +277,11 @@ async function loadUsers() {
   } catch (error) {
     if (error.status === 403) {
       USERS = CURRENT_USER ? [{ id: CURRENT_USER.id, full_name: CURRENT_USER.full_name, role: CURRENT_USER.role, email: CURRENT_USER.email }] : [];
-      return;
+    } else {
+      throw error;
     }
-    throw error;
   }
+  setText('metricPermissions', String(USERS.length));
 }
 
 async function loadBranches() {
@@ -311,7 +318,7 @@ async function loadBranches() {
 }
 
 function vehicleCard(vehicle) {
-  const img = window.REDLINE.pickCoverImage(vehicle) || 'https://via.placeholder.com/800x450?text=Sin+imagen';
+  const img = window.REDLINE.pickCoverImage(vehicle) || PLACEHOLDER_IMG;
   return `
     <article class="vehicle-card">
       <div class="vehicle-img-wrap">
@@ -674,6 +681,8 @@ async function openImagesPanel(vehicle) {
 async function handleBranchSubmit(evt) {
   evt.preventDefault();
   const branchId = el('branchId').value;
+  const btn = el('branchSubmitBtn');
+  btn.disabled = true;
   const payload = {
     name: el('branchName').value.trim(),
     phone: el('branchPhone').value.trim() || null,
@@ -693,6 +702,8 @@ async function handleBranchSubmit(evt) {
     await loadBranches();
   } catch (error) {
     showMessage('branchFormStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -719,6 +730,8 @@ function resetBranchForm() {
 async function handleVehicleSubmit(evt) {
   evt.preventDefault();
   const vehicleId = el('vehicleId').value;
+  const btn = el('vehicleForm').querySelector('[type="submit"]');
+  btn.disabled = true;
   const payload = collectVehiclePayload();
   showMessage('vehicleFormStatus', vehicleId ? 'Actualizando vehículo...' : 'Creando vehículo...');
   try {
@@ -733,12 +746,16 @@ async function handleVehicleSubmit(evt) {
     await loadVehicles();
   } catch (error) {
     showMessage('vehicleFormStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
 async function handleClientSubmit(evt) {
   evt.preventDefault();
   const clientId = el('clientId').value;
+  const btn = el('clientForm').querySelector('[type="submit"]');
+  btn.disabled = true;
   const payload = {
     full_name: el('clientFullName').value.trim(),
     document_type: el('clientDocumentType').value.trim() || null,
@@ -763,12 +780,16 @@ async function handleClientSubmit(evt) {
     await loadClients();
   } catch (error) {
     showMessage('clientFormStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
 async function handleSaleSubmit(evt) {
   evt.preventDefault();
   const saleId = el('saleId').value;
+  const btn = el('saleForm').querySelector('[type="submit"]');
+  btn.disabled = true;
   const payload = {
     branch_id: el('saleBranch').value,
     client_id: el('saleClient').value,
@@ -794,11 +815,15 @@ async function handleSaleSubmit(evt) {
     await Promise.all([loadSales(), loadVehicles(), loadClients()]);
   } catch (error) {
     showMessage('saleFormStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
 async function handleSettingsSubmit(evt) {
   evt.preventDefault();
+  const btn = el('settingsForm').querySelector('[type="submit"]');
+  btn.disabled = true;
   const payload = {
     business_name: el('settingsBusinessName').value.trim(),
     logo_path: el('settingsLogoPath').value.trim() || null,
@@ -819,6 +844,8 @@ async function handleSettingsSubmit(evt) {
     showMessage('settingsFormStatus', 'Configuración actualizada correctamente.');
   } catch (error) {
     showMessage('settingsFormStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -831,6 +858,8 @@ async function handleImageSubmit(evt) {
     return;
   }
   const formData = new FormData();
+  const btn = el('imageUploadForm').querySelector('[type="submit"]');
+  btn.disabled = true;
   formData.append('file', file);
   formData.append('sort_order', el('imageSortOrder').value || '0');
   formData.append('is_cover', String(el('imageIsCover').checked));
@@ -844,6 +873,8 @@ async function handleImageSubmit(evt) {
     await loadVehicles();
   } catch (error) {
     showMessage('imageUploadStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -856,6 +887,8 @@ async function handleImageUrlSubmit(evt) {
     return;
   }
 
+  const btn = el('imageUrlForm').querySelector('[type="submit"]');
+  btn.disabled = true;
   showMessage('imageUploadStatus', 'Guardando URL de imagen...');
   try {
     await window.REDLINE.request(`/vehicles/${ACTIVE_IMAGES_VEHICLE_ID}/images`, {
@@ -873,6 +906,8 @@ async function handleImageUrlSubmit(evt) {
     await loadVehicles();
   } catch (error) {
     showMessage('imageUploadStatus', error.message, true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -896,7 +931,7 @@ async function handleMainClick(evt) {
       return;
     }
     if (action === 'delete-branch') {
-      if (!askConfirmation('¿Eliminar esta sucursal? Solo es posible si no tiene vehículos ni ventas asociadas.')) return;
+      if (!await askConfirmation('¿Eliminar esta sucursal? Solo es posible si no tiene vehículos ni ventas asociadas.')) return;
       await window.REDLINE.request(`/branches/${id}`, { method: 'DELETE' });
       await loadBranches();
       return;
@@ -912,7 +947,7 @@ async function handleMainClick(evt) {
       return;
     }
     if (action === 'delete-vehicle') {
-      if (!askConfirmation('¿Eliminar este vehículo?')) return;
+      if (!await askConfirmation('¿Eliminar este vehículo?')) return;
       await window.REDLINE.request(`/vehicles/${id}`, { method: 'DELETE' });
       await loadVehicles();
       return;
@@ -928,7 +963,7 @@ async function handleMainClick(evt) {
       return;
     }
     if (action === 'delete-client') {
-      if (!askConfirmation('¿Eliminar este cliente?')) return;
+      if (!await askConfirmation('¿Eliminar este cliente?')) return;
       await window.REDLINE.request(`/clients/${id}`, { method: 'DELETE' });
       await Promise.all([loadClients(), loadSales()]);
       return;
@@ -943,7 +978,7 @@ async function handleMainClick(evt) {
       return;
     }
     if (action === 'delete-sale') {
-      if (!askConfirmation('¿Eliminar esta venta? El vehículo volverá a estar disponible.')) return;
+      if (!await askConfirmation('¿Eliminar esta venta? El vehículo volverá a estar disponible.')) return;
       await window.REDLINE.request(`/sales/${id}`, { method: 'DELETE' });
       await Promise.all([loadVehicles(), loadSales()]);
       return;
@@ -976,6 +1011,7 @@ async function handleImageActions(evt) {
       await window.REDLINE.request(`/vehicles/${ACTIVE_IMAGES_VEHICLE_ID}/images/${button.dataset.imageId}/cover`, { method: 'PATCH' });
     }
     if (button.dataset.imageAction === 'delete') {
+      if (!await askConfirmation('¿Eliminar esta imagen?')) return;
       await window.REDLINE.request(`/vehicles/${ACTIVE_IMAGES_VEHICLE_ID}/images/${button.dataset.imageId}`, { method: 'DELETE' });
     }
     await refreshImages();
@@ -1047,20 +1083,33 @@ function wireUi() {
   el('imagesModal').addEventListener('click', (evt) => {
     if (evt.target === el('imagesModal')) closeImagesModal();
   });
+  el('confirmOkBtn').addEventListener('click', () => {
+    el('confirmModal').classList.add('hidden');
+    if (_confirmResolve) { _confirmResolve(true); _confirmResolve = null; }
+  });
+  el('confirmCancelBtn').addEventListener('click', () => {
+    el('confirmModal').classList.add('hidden');
+    if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
+  });
+
   document.addEventListener('keydown', (evt) => {
-    if (evt.key === 'Escape' && !el('imagesModal').classList.contains('hidden')) closeImagesModal();
+    if (evt.key === 'Escape') {
+      if (!el('imagesModal').classList.contains('hidden')) closeImagesModal();
+      if (!el('confirmModal').classList.contains('hidden')) {
+        el('confirmModal').classList.add('hidden');
+        if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
+      }
+    }
   });
 }
 
 async function bootstrap() {
   if (!ensureAuthenticated()) return;
+  const overlay = el('appLoadingOverlay');
   try {
     await loadCurrentUser();
-    await loadCatalogs();
-    await loadUsers();
-    await loadBranches();
-    await loadVehicles();
-    await loadClients();
+    await Promise.all([loadCatalogs(), loadUsers(), loadBranches()]);
+    await Promise.all([loadVehicles(), loadClients()]);
     await loadSales();
     await loadSettings();
     syncSharedSelects();
@@ -1074,6 +1123,8 @@ async function bootstrap() {
       return;
     }
     toast(`No se pudo cargar el panel: ${error.message}`, 'error');
+  } finally {
+    if (overlay) overlay.classList.add('hidden');
   }
 }
 
