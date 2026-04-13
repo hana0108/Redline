@@ -242,6 +242,12 @@ nav a.active {
   background: #2f3540;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .api-box {
   margin-top: 18px;
   border-top: 1px dashed var(--line);
@@ -430,6 +436,14 @@ nav a.active {
 
 .modal-actions {
   margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions .btn,
+.modal-actions a.btn {
+  flex: 1;
+  margin-top: 0;
 }
 
 @media (max-width: 920px) {

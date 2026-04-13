@@ -99,6 +99,12 @@ function fillModal(vehicle) {
   el('mColor').textContent = vehicle.color || 'N/D';
   el('mDescription').textContent = vehicle.description || 'Sin descripción disponible.';
   el('proceedSaleBtn').href = `login/index.html?vehicle_id=${encodeURIComponent(vehicle.id)}`;
+
+  const reserveBtn = el('reserveBtn');
+  const alreadyReserved = vehicle.status === 'reservado';
+  reserveBtn.textContent = alreadyReserved ? 'Reservado' : 'Reservar';
+  reserveBtn.disabled = alreadyReserved;
+  reserveBtn.dataset.vehicleId = vehicle.id;
 }
 
 async function openVehicleModal(vehicleId) {
@@ -131,6 +137,24 @@ function wireEvents() {
   el('closeModal').addEventListener('click', closeModal);
   el('vehicleModal').addEventListener('click', (evt) => {
     if (evt.target.id === 'vehicleModal') closeModal();
+  });
+
+  el('reserveBtn').addEventListener('click', async () => {
+    const btn = el('reserveBtn');
+    const vehicleId = btn.dataset.vehicleId;
+    if (!vehicleId || btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Reservando...';
+    try {
+      await window.REDLINE.request(`/vehicles/public/${vehicleId}/reserve`, { method: 'POST' });
+      btn.textContent = 'Reservado';
+      closeModal();
+      await loadVehicles();
+    } catch (e) {
+      btn.textContent = 'Reservar';
+      btn.disabled = false;
+      alert(e.message || 'No se pudo reservar el vehículo');
+    }
   });
 }
 

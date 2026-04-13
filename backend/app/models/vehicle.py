@@ -20,7 +20,9 @@ class Vehicle(Base, TimestampMixin):
     __tablename__ = "vehicles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    branch_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
+    branch_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False
+    )
     brand: Mapped[str] = mapped_column(String(100), nullable=False)
     model: Mapped[str] = mapped_column(String(100), nullable=False)
     vehicle_year: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -43,7 +45,10 @@ class Vehicle(Base, TimestampMixin):
 
     branch: Mapped["Branch"] = relationship("Branch", back_populates="vehicles")
     images: Mapped[list["VehicleImage"]] = relationship(
-        "VehicleImage", back_populates="vehicle", cascade="all, delete-orphan", order_by="VehicleImage.sort_order"
+        "VehicleImage",
+        back_populates="vehicle",
+        cascade="all, delete-orphan",
+        order_by="VehicleImage.sort_order",
     )
     status_history: Mapped[list["VehicleStatusHistory"]] = relationship(
         "VehicleStatusHistory", back_populates="vehicle", cascade="all, delete-orphan"
@@ -68,9 +73,18 @@ class VehicleStatusHistory(Base, TimestampMixin):
     __tablename__ = "vehicle_status_history"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    vehicle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=False)
-    old_status: Mapped[VehicleStatus | None] = mapped_column(pg_enum(VehicleStatus, "vehicle_status"), nullable=True)
-    new_status: Mapped[VehicleStatus] = mapped_column(pg_enum(VehicleStatus, "vehicle_status"), nullable=False)
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=False
+    )
+    old_status: Mapped[VehicleStatus | None] = mapped_column(
+        pg_enum(VehicleStatus, "vehicle_status"), nullable=True
+    )
+    new_status: Mapped[VehicleStatus] = mapped_column(
+        pg_enum(VehicleStatus, "vehicle_status"), nullable=False
+    )
+    changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
     notes: Mapped[str | None] = mapped_column(Text())
 
     vehicle: Mapped["Vehicle"] = relationship("Vehicle", back_populates="status_history")

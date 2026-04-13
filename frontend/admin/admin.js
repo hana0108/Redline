@@ -561,6 +561,7 @@ async function openImagesPanel(vehicle) {
   ACTIVE_IMAGES_VEHICLE_ID = vehicle.id;
   el('imagesPanel').classList.remove('hidden');
   setText('imagesTitle', `${vehicle.brand} ${vehicle.model} · ${vehicle.vin}`);
+  el('imagesPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   await refreshImages();
 }
 

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import require_permissions
 from app.core.config import settings
 from app.db.session import get_db
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, VehicleStatus
 from app.models.branch import Branch
 from app.models.sale import Sale
 from app.models.user import User
@@ -143,6 +143,33 @@ def get_public_vehicle(
 
     branch = db.get(Branch, vehicle.branch_id)
     return _public_vehicle_payload(vehicle, branch.name if branch else "Sin sucursal")
+
+
+@router.post("/public/{vehicle_id}/reserve", status_code=status.HTTP_200_OK)
+def reserve_vehicle_public(
+    vehicle_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.id == vehicle_id))
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+    if vehicle.status != VehicleStatus.DISPONIBLE:
+        raise HTTPException(
+            status_code=409,
+            detail="Este vehículo ya no está disponible para reserva",
+        )
+    vehicle.status = VehicleStatus.RESERVADO
+    db.add(
+        VehicleStatusHistory(
+            vehicle_id=vehicle.id,
+            old_status=VehicleStatus.DISPONIBLE,
+            new_status=VehicleStatus.RESERVADO,
+            changed_by=None,
+            notes="Reservado desde portal público",
+        )
+    )
+    db.commit()
+    return {"message": "Vehículo reservado exitosamente"}
 
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
