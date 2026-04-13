@@ -548,13 +548,13 @@ async function refreshImages() {
   el('imagesList').innerHTML = images.length ? images.map(image => `
     <div class="image-card">
       <img src="${escapeHtml(window.REDLINE.pickCoverImage({ images: [image] }) || image.file_path)}" alt="Imagen" />
-      <div class="muted">Orden: ${image.sort_order} ${image.is_cover ? '· Portada' : ''}</div>
+      <div class="muted">Orden: ${image.sort_order}${image.is_cover ? ' &middot; <strong>Portada</strong>' : ''}</div>
       <div class="entity-actions">
-        <button class="btn secondary small" data-image-action="cover" data-image-id="${image.id}">Portada</button>
+        ${image.is_cover ? '' : `<button class="btn secondary small" data-image-action="cover" data-image-id="${image.id}">Portada</button>`}
         <button class="btn danger small" data-image-action="delete" data-image-id="${image.id}">Eliminar</button>
       </div>
     </div>
-  `).join('') : '<div class="muted">Sin imágenes.</div>';
+  `).join('') : '<div class="muted" style="padding: 16px 0;">Sin imágenes cargadas aún.</div>';
 }
 
 async function openImagesPanel(vehicle) {
