@@ -189,8 +189,12 @@ function getVehicleLabel(vehicleId) {
   return vehicle ? `${vehicle.brand} ${vehicle.model} · ${vehicle.vin}` : 'Vehículo desconocido';
 }
 
-function activeOrRelevantVehicles() {
-  return VEHICLES.filter(vehicle => vehicle.status !== 'vendido' && vehicle.status !== 'retirado');
+function activeOrRelevantVehicles(branchId = null) {
+  return VEHICLES.filter(v =>
+    v.status !== 'vendido' &&
+    v.status !== 'retirado' &&
+    (!branchId || String(v.branch_id) === String(branchId))
+  );
 }
 
 function syncSharedSelects() {
@@ -202,7 +206,9 @@ function syncSharedSelects() {
   populateSelect('saleClient', CLIENTS, CLIENTS.length ? 'Selecciona cliente' : 'Sin clientes', el('saleClient')?.value, clientMapper);
 
   const vehicleMapper = (item) => ({ value: item.id, label: `${item.brand} ${item.model} · ${item.vin}` });
-  populateSelect('saleVehicle', activeOrRelevantVehicles(), activeOrRelevantVehicles().length ? 'Selecciona vehículo' : 'Sin vehículos disponibles', el('saleVehicle')?.value, vehicleMapper);
+  const selectedBranch = el('saleBranch')?.value || null;
+  const branchVehicles = activeOrRelevantVehicles(selectedBranch);
+  populateSelect('saleVehicle', branchVehicles, branchVehicles.length ? 'Selecciona vehículo' : 'Sin vehículos en esta sucursal', el('saleVehicle')?.value, vehicleMapper);
 
   const userMapper = (item) => ({ value: item.id, label: `${item.full_name} · ${item.role?.name || item.role}` });
   populateSelect('saleSeller', USERS, 'Sin vendedor', el('saleSeller')?.value, userMapper);
@@ -504,6 +510,7 @@ function resetSaleForm() {
 function fillSaleForm(sale) {
   el('saleId').value = sale.id;
   el('saleBranch').value = sale.branch_id;
+  syncSharedSelects();
   el('saleClient').value = sale.client_id;
   el('saleVehicle').value = sale.vehicle_id;
   el('saleSeller').value = sale.seller_user_id || '';
@@ -847,6 +854,8 @@ function wireUi() {
   el('vehicleSearch').addEventListener('input', renderVehicles);
   el('vehicleStatusFilter').addEventListener('change', renderVehicles);
   el('clientSearch').addEventListener('input', renderClients);
+
+  el('saleBranch').addEventListener('change', syncSharedSelects);
 
   el('vehicleBrand').addEventListener('change', (evt) => {
     loadVehicleModels(evt.target.value).catch(() => {});
