@@ -15,15 +15,27 @@ def _project_root() -> Path:
 
 
 def _execute_sql_file(sql_path: Path) -> None:
+    """Execute a .sql file that manages its own BEGIN/COMMIT transaction.
+
+    psycopg3 starts an implicit transaction on the first execute() call
+    (auto-begin).  That conflicts with the explicit BEGIN inside our SQL
+    files and causes psycopg3's internal transaction-state to desync.
+    Setting autocommit=True on the underlying DBAPI connection before
+    executing lets the SQL file control the transaction itself.
+    """
     sql_text = sql_path.read_text(encoding="utf-8")
     raw = engine.raw_connection()
     try:
-        cursor = raw.cursor()
+        # raw.driver_connection is the actual psycopg3 Connection object.
+        # autocommit can be changed when the connection is idle (which it
+        # always is right after pool checkout with pool_pre_ping=True).
+        dbapi_conn = raw.driver_connection
+        dbapi_conn.autocommit = True
         try:
-            cursor.execute(sql_text)
-            raw.commit()
+            with dbapi_conn.cursor() as cur:
+                cur.execute(sql_text)
         finally:
-            cursor.close()
+            dbapi_conn.autocommit = False
     finally:
         raw.close()
 
