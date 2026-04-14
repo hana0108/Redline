@@ -14,6 +14,7 @@ from app.models.client import Client, ClientImage, ClientPreference
 from app.models.enums import AuditAction
 from app.models.sale import Sale
 from app.models.user import User
+from app.models.vehicle import VehicleStatusHistory
 from app.schemas.client import (
     ClientImageResponse,
     ClientCreate,
@@ -21,6 +22,7 @@ from app.schemas.client import (
     ClientResponse,
     ClientUpdate,
     HistorySale,
+    HistoryStatusEvent,
 )
 from app.services.audit import add_audit_log
 from app.services.cache_service import cache_service
@@ -195,9 +197,26 @@ def get_client_history(
         ).all()
     ]
 
+    status_events = [
+        HistoryStatusEvent(
+            id=item.id,
+            vehicle_id=item.vehicle_id,
+            old_status=item.old_status.value if item.old_status else None,
+            new_status=item.new_status.value,
+            notes=item.notes,
+            created_at=item.created_at,
+        )
+        for item in db.scalars(
+            select(VehicleStatusHistory)
+            .where(VehicleStatusHistory.client_id == client_id)
+            .order_by(VehicleStatusHistory.created_at.desc())
+        ).all()
+    ]
+
     return ClientHistoryResponse(
         client_id=client_id,
         sales=sales,
+        status_events=status_events,
     )
 
 

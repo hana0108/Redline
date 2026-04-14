@@ -366,6 +366,50 @@ textarea { min-height: 110px; resize: vertical; }
   padding-left: 18px;
   color: var(--muted);
 }
+.history-box ul li {
+  margin-bottom: 8px;
+}
+.badge-inline {
+  display: inline-flex;
+  padding: 2px 8px;
+  font-size: 11px;
+  vertical-align: middle;
+}
+/* Vehicle status history modal */
+.history-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+.history-event-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface, #f8f9fb);
+  border: 1px solid var(--line);
+}
+.history-event-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.history-arrow {
+  color: var(--muted);
+  font-size: 14px;
+}
+.history-event-meta {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
 .hidden { display: none; }
 
 /* ── Images modal ─────────────────────────────────── */

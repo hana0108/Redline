@@ -84,6 +84,16 @@ class HistorySale(BaseModel):
     status: str
 
 
+class HistoryStatusEvent(BaseModel):
+    id: UUID
+    vehicle_id: UUID
+    old_status: str | None
+    new_status: str
+    notes: str | None
+    created_at: datetime
+
+
 class ClientHistoryResponse(BaseModel):
     client_id: UUID
     sales: list[HistorySale]
+    status_events: list[HistoryStatusEvent] = []

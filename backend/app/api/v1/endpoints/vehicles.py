@@ -24,6 +24,7 @@ from app.schemas.vehicle import (
     VehicleImageResponse,
     VehicleImageSortUpdate,
     VehicleResponse,
+    VehicleStatusHistoryEntry,
     VehicleStatusUpdate,
     VehicleUpdate,
 )
@@ -366,6 +367,22 @@ async def update_vehicle_status(
     await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
 
     return get_vehicle_or_404(db, vehicle.id)
+
+
+@router.get("/{vehicle_id}/status-history", response_model=list[VehicleStatusHistoryEntry])
+def get_vehicle_status_history(
+    vehicle_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("vehicles.read"))],
+) -> list[VehicleStatusHistory]:
+    get_vehicle_or_404(db, vehicle_id)
+    return list(
+        db.scalars(
+            select(VehicleStatusHistory)
+            .where(VehicleStatusHistory.vehicle_id == vehicle_id)
+            .order_by(VehicleStatusHistory.created_at.desc())
+        ).all()
+    )
 
 
 @router.get("/{vehicle_id}/images", response_model=list[VehicleImageResponse])

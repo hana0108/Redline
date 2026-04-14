@@ -343,6 +343,7 @@ function vehicleCard(vehicle) {
         <div class="vehicle-actions">
           <button class="btn secondary small" data-action="edit-vehicle" data-id="${vehicle.id}">Editar</button>
           <button class="btn secondary small" data-action="images" data-id="${vehicle.id}">Imágenes</button>
+          <button class="btn secondary small" data-action="vehicle-history" data-id="${vehicle.id}">Historial</button>
           <button class="btn danger small" data-action="delete-vehicle" data-id="${vehicle.id}">Eliminar</button>
           <select class="status-select" data-action="status" data-id="${vehicle.id}">
             ${Object.entries(STATUS_LABELS).map(([value, label]) => `<option value="${value}" ${vehicle.status === value ? 'selected' : ''}>${label}</option>`).join('')}
@@ -387,10 +388,12 @@ function renderReserved() {
 function renderSalesHistory() {
   const branchId = el('salesHistoryBranchFilter')?.value || '';
   const search = el('salesHistorySearch')?.value.trim().toLowerCase() || '';
+  const statusFilter = el('salesHistoryStatusFilter')?.value || '';
   const filtered = SALES.filter(item => {
     const clientName = getClientName(item.client_id).toLowerCase();
     const vehicleLabel = getVehicleLabel(item.vehicle_id).toLowerCase();
     return (!branchId || String(item.branch_id) === branchId)
+      && (!statusFilter || item.status === statusFilter)
       && (!search || clientName.includes(search) || vehicleLabel.includes(search));
   });
   const sorted = [...filtered].sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
@@ -407,6 +410,7 @@ function renderSalesHistory() {
           <div class="entity-meta">
             <span class="meta-pill">Sucursal: ${escapeHtml(getBranchName(item.branch_id))}</span>
             <span class="meta-pill">Precio: ${window.REDLINE.formatCurrencyRD(item.sale_price)}</span>
+            ${item.profit != null ? `<span class="meta-pill">Ganancia: ${window.REDLINE.formatCurrencyRD(item.profit)}</span>` : ''}
             <span class="meta-pill">Pago: ${escapeHtml(item.payment_method || 'No indicado')}</span>
             <span class="meta-pill">Vendedor: ${escapeHtml(item.seller_user_id ? getUserName(item.seller_user_id) : 'Sin vendedor')}</span>
           </div>
@@ -565,22 +569,81 @@ function showClientHistory(history, clientId) {
   const panel = el('clientHistoryPanel');
   const client = CLIENTS.find(item => item.id === clientId);
   panel.classList.remove('hidden');
+
+  const salesHtml = history.sales.length
+    ? `<ul>${history.sales.map(item => `
+        <li>
+          <strong>${escapeHtml(getVehicleLabel(item.vehicle_id))}</strong>
+          <div class="muted">${window.REDLINE.formatCurrencyRD(item.sale_price)} · ${formatDateTime(item.sale_date)} · <span class="badge ${badgeClass(item.status)} badge-inline">${escapeHtml(SALE_LABELS[item.status] || item.status)}</span></div>
+        </li>`).join('')}</ul>`
+    : '<div class="muted">Sin ventas.</div>';
+
+  const eventsHtml = history.status_events && history.status_events.length
+    ? `<ul>${history.status_events.map(ev => `
+        <li>
+          <strong>${escapeHtml(getVehicleLabel(ev.vehicle_id))}</strong>
+          <div class="muted">
+            ${ev.old_status ? `<span class="badge ${badgeClass(ev.old_status)} badge-inline">${escapeHtml(STATUS_LABELS[ev.old_status] || ev.old_status)}</span> → ` : ''}
+            <span class="badge ${badgeClass(ev.new_status)} badge-inline">${escapeHtml(STATUS_LABELS[ev.new_status] || ev.new_status)}</span>
+            · ${formatDateTime(ev.created_at)}
+            ${ev.notes ? ` · ${escapeHtml(ev.notes)}` : ''}
+          </div>
+        </li>`).join('')}</ul>`
+    : '<div class="muted">Sin cambios de estado.</div>';
+
   panel.innerHTML = `
     <div class="card-head space-between">
       <div>
         <h3>Historial de ${escapeHtml(client?.full_name || 'cliente')}</h3>
-        <span class="muted">Ventas relacionadas</span>
+        <span class="muted">Actividad comercial registrada</span>
       </div>
       <button class="btn secondary small" id="closeClientHistoryBtn">Cerrar</button>
     </div>
     <div class="history-grid">
       <div class="history-box">
         <h5>Ventas (${history.sales.length})</h5>
-        ${history.sales.length ? `<ul>${history.sales.map(item => `<li>${escapeHtml(getVehicleLabel(item.vehicle_id))} · ${window.REDLINE.formatCurrencyRD(item.sale_price)} · ${formatDateTime(item.sale_date)}</li>`).join('')}</ul>` : '<div class="muted">Sin ventas.</div>'}
+        ${salesHtml}
+      </div>
+      <div class="history-box">
+        <h5>Cambios de estado (${(history.status_events || []).length})</h5>
+        ${eventsHtml}
       </div>
     </div>
   `;
   el('closeClientHistoryBtn').addEventListener('click', () => panel.classList.add('hidden'));
+}
+
+async function showVehicleHistory(vehicleId) {
+  const vehicle = VEHICLES.find(v => v.id === vehicleId);
+  const modal = el('vehicleHistoryModal');
+  el('vehicleHistorySubtitle').textContent = vehicle ? `${vehicle.brand} ${vehicle.model} · ${vehicle.vin}` : vehicleId;
+  el('vehicleHistoryList').innerHTML = '<div class="muted">Cargando...</div>';
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const events = await window.REDLINE.request(`/vehicles/${vehicleId}/status-history`);
+    if (!events.length) {
+      el('vehicleHistoryList').innerHTML = '<div class="muted" style="padding:20px 0">Sin cambios de estado registrados.</div>';
+      return;
+    }
+    el('vehicleHistoryList').innerHTML = events.map(ev => `
+      <div class="history-event-row">
+        <div class="history-event-badges">
+          ${ev.old_status ? `<span class="badge ${badgeClass(ev.old_status)}">${escapeHtml(STATUS_LABELS[ev.old_status] || ev.old_status)}</span><span class="history-arrow">→</span>` : ''}
+          <span class="badge ${badgeClass(ev.new_status)}">${escapeHtml(STATUS_LABELS[ev.new_status] || ev.new_status)}</span>
+        </div>
+        <div class="history-event-meta">
+          <span>${formatDateTime(ev.created_at)}</span>
+          ${ev.changed_by ? `<span>· Por: ${escapeHtml(getUserName(ev.changed_by))}</span>` : ''}
+          ${ev.client_id ? `<span>· Cliente: ${escapeHtml(getClientName(ev.client_id))}</span>` : ''}
+          ${ev.notes ? `<span class="muted">· ${escapeHtml(ev.notes)}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    el('vehicleHistoryList').innerHTML = `<div class="muted" style="color:#b11b17">Error al cargar historial.</div>`;
+  }
 }
 
 function saleCard(item) {
@@ -954,6 +1017,10 @@ async function handleMainClick(evt) {
       if (vehicle) await openImagesPanel(vehicle);
       return;
     }
+    if (action === 'vehicle-history') {
+      await showVehicleHistory(id);
+      return;
+    }
     if (action === 'delete-vehicle') {
       if (!await askConfirmation('¿Eliminar este vehículo?')) return;
       await window.REDLINE.request(`/vehicles/${id}`, { method: 'DELETE' });
@@ -1152,6 +1219,7 @@ function wireUi() {
   el('vehicleBranchFilter').addEventListener('change', renderVehicles);
   el('clientSearch').addEventListener('input', renderClients);
   el('salesHistoryBranchFilter').addEventListener('change', renderSalesHistory);
+  el('salesHistoryStatusFilter').addEventListener('change', renderSalesHistory);
   el('salesHistorySearch').addEventListener('input', renderSalesHistory);
   el('refreshReservedBtn').addEventListener('click', loadVehicles);
   el('refreshSalesHistoryBtn').addEventListener('click', loadSales);
@@ -1190,6 +1258,15 @@ function wireUi() {
   el('imagesModal').addEventListener('click', (evt) => {
     if (evt.target === el('imagesModal')) closeImagesModal();
   });
+
+  function closeVehicleHistoryModal() {
+    el('vehicleHistoryModal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  el('closeVehicleHistoryBtn').addEventListener('click', closeVehicleHistoryModal);
+  el('vehicleHistoryModal').addEventListener('click', (evt) => {
+    if (evt.target === el('vehicleHistoryModal')) closeVehicleHistoryModal();
+  });
   el('confirmOkBtn').addEventListener('click', () => {
     el('confirmModal').classList.add('hidden');
     if (_confirmResolve) { _confirmResolve(true); _confirmResolve = null; }
@@ -1208,6 +1285,7 @@ function wireUi() {
   document.addEventListener('keydown', (evt) => {
     if (evt.key === 'Escape') {
       if (!el('imagesModal').classList.contains('hidden')) closeImagesModal();
+      if (!el('vehicleHistoryModal').classList.contains('hidden')) closeVehicleHistoryModal();
       if (!el('confirmModal').classList.contains('hidden')) {
         el('confirmModal').classList.add('hidden');
         if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }

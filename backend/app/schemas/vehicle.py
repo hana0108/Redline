@@ -96,3 +96,15 @@ class VehicleResponse(VehicleBase):
     created_at: datetime
     updated_at: datetime
     images: list[VehicleImageResponse] = []
+
+
+class VehicleStatusHistoryEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    old_status: VehicleStatus | None
+    new_status: VehicleStatus
+    changed_by: UUID | None
+    client_id: UUID | None
+    notes: str | None
+    created_at: datetime
