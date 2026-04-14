@@ -276,6 +276,17 @@ textarea { min-height: 110px; resize: vertical; }
   transition: box-shadow var(--transition);
 }
 .vehicle-card:hover { box-shadow: var(--shadow-md); }
+.vehicle-card--branch-inactive {
+  border-color: #e9a02a;
+  background: #fffbf3;
+  opacity: .85;
+}
+.vehicle-card--branch-inactive:hover { box-shadow: 0 4px 16px rgba(233,160,42,.15); }
+.branch-inactive-badge {
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .vehicle-img-wrap {
   position: relative;
   flex-shrink: 0;

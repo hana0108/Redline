@@ -320,8 +320,13 @@ async function loadBranches() {
 
 function vehicleCard(vehicle) {
   const img = window.REDLINE.pickCoverImage(vehicle) || PLACEHOLDER_IMG;
+  const branch = BRANCHES.find(b => b.id === vehicle.branch_id);
+  const branchInactive = branch && branch.status !== 'active';
+  const inactiveBadge = branchInactive
+    ? `<span class="badge other branch-inactive-badge" title="Sucursal desactivada">⚠ Sucursal inactiva</span>`
+    : '';
   return `
-    <article class="vehicle-card">
+    <article class="vehicle-card${branchInactive ? ' vehicle-card--branch-inactive' : ''}">
       <div class="vehicle-img-wrap">
         <img src="${escapeHtml(img)}" alt="${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)}" loading="lazy" />
         <span class="vehicle-status-overlay badge ${badgeClass(vehicle.status)}">${escapeHtml(STATUS_LABELS[vehicle.status] || vehicle.status)}</span>
@@ -332,6 +337,7 @@ function vehicleCard(vehicle) {
             <h4>${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.model)} <small class="muted" style="font-size:14px;font-weight:500">${vehicle.vehicle_year}</small></h4>
             <div class="muted" style="font-size:13px">VIN: ${escapeHtml(vehicle.vin)} &middot; Placa: ${escapeHtml(vehicle.plate || 'N/D')} &middot; ${escapeHtml(getBranchName(vehicle.branch_id))}</div>
           </div>
+          ${inactiveBadge}
         </div>
         <div class="vehicle-price">${window.REDLINE.formatCurrencyRD(vehicle.price)}</div>
         <div class="meta-grid">
@@ -566,9 +572,9 @@ async function loadClients() {
 }
 
 function showClientHistory(history, clientId) {
-  const panel = el('clientHistoryPanel');
   const client = CLIENTS.find(item => item.id === clientId);
-  panel.classList.remove('hidden');
+  el('clientHistoryTitle').textContent = `Historial de ${client?.full_name || 'cliente'}`;
+  el('clientHistorySubtitle').textContent = `${history.sales.length} venta(s) · ${(history.status_events || []).length} cambio(s) de estado`;
 
   const salesHtml = history.sales.length
     ? `<ul>${history.sales.map(item => `
@@ -591,15 +597,8 @@ function showClientHistory(history, clientId) {
         </li>`).join('')}</ul>`
     : '<div class="muted">Sin cambios de estado.</div>';
 
-  panel.innerHTML = `
-    <div class="card-head space-between">
-      <div>
-        <h3>Historial de ${escapeHtml(client?.full_name || 'cliente')}</h3>
-        <span class="muted">Actividad comercial registrada</span>
-      </div>
-      <button class="btn secondary small" id="closeClientHistoryBtn">Cerrar</button>
-    </div>
-    <div class="history-grid">
+  el('clientHistoryContent').innerHTML = `
+    <div class="history-grid" style="margin-top:4px">
       <div class="history-box">
         <h5>Ventas (${history.sales.length})</h5>
         ${salesHtml}
@@ -610,7 +609,9 @@ function showClientHistory(history, clientId) {
       </div>
     </div>
   `;
-  el('closeClientHistoryBtn').addEventListener('click', () => panel.classList.add('hidden'));
+
+  el('clientHistoryModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
 
 async function showVehicleHistory(vehicleId) {
@@ -1267,6 +1268,15 @@ function wireUi() {
   el('vehicleHistoryModal').addEventListener('click', (evt) => {
     if (evt.target === el('vehicleHistoryModal')) closeVehicleHistoryModal();
   });
+
+  function closeClientHistoryModal() {
+    el('clientHistoryModal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  el('closeClientHistoryBtn').addEventListener('click', closeClientHistoryModal);
+  el('clientHistoryModal').addEventListener('click', (evt) => {
+    if (evt.target === el('clientHistoryModal')) closeClientHistoryModal();
+  });
   el('confirmOkBtn').addEventListener('click', () => {
     el('confirmModal').classList.add('hidden');
     if (_confirmResolve) { _confirmResolve(true); _confirmResolve = null; }
@@ -1286,6 +1296,7 @@ function wireUi() {
     if (evt.key === 'Escape') {
       if (!el('imagesModal').classList.contains('hidden')) closeImagesModal();
       if (!el('vehicleHistoryModal').classList.contains('hidden')) closeVehicleHistoryModal();
+      if (!el('clientHistoryModal').classList.contains('hidden')) closeClientHistoryModal();
       if (!el('confirmModal').classList.contains('hidden')) {
         el('confirmModal').classList.add('hidden');
         if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }

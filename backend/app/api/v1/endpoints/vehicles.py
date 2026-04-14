@@ -122,14 +122,18 @@ def list_public_vehicles(
     vehicles = list(db.scalars(query).all())
 
     branch_ids = {item.branch_id for item in vehicles}
-    branch_map = (
-        {
-            item.id: item.name
-            for item in db.scalars(select(Branch).where(Branch.id.in_(branch_ids))).all()
-        }
-        if branch_ids
-        else {}
-    )
+    branch_map: dict = {}
+    if branch_ids:
+        active_branch_ids: set = set()
+        for item in db.scalars(select(Branch).where(Branch.id.in_(branch_ids))).all():
+            branch_map[item.id] = item.name
+            if item.status == "active":
+                active_branch_ids.add(item.id)
+    else:
+        active_branch_ids = set()
+
+    # Only return vehicles whose branch is active
+    vehicles = [v for v in vehicles if v.branch_id in active_branch_ids]
 
     return [
         _public_vehicle_payload(item, branch_map.get(item.branch_id, "Sin sucursal"))

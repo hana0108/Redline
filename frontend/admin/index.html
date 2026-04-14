@@ -184,7 +184,6 @@
           </div>
         </div>
         <div id="clientList" class="list-grid scrollable-list"></div>
-        <div id="clientHistoryPanel" class="subpanel hidden"></div>
       </div>
     </section>
 
@@ -326,6 +325,20 @@
         <button id="closeVehicleHistoryBtn" class="btn secondary small" aria-label="Cerrar">✕</button>
       </div>
       <div id="vehicleHistoryList" class="history-event-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal historial de cliente -->
+  <div id="clientHistoryModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="clientHistoryTitle">
+    <div class="admin-modal-panel" style="max-width:700px">
+      <div class="admin-modal-header">
+        <div>
+          <h3 id="clientHistoryTitle">Historial de cliente</h3>
+          <span id="clientHistorySubtitle" class="muted"></span>
+        </div>
+        <button id="closeClientHistoryBtn" class="btn secondary small" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="clientHistoryContent"></div>
     </div>
   </div>
 
