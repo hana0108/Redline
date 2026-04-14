@@ -112,7 +112,6 @@
             <select id="vehicleStatusFilter">
               <option value="">Todos los estados</option>
               <option value="disponible">Disponible</option>
-              <option value="reservado">Reservado</option>
               <option value="vendido">Vendido</option>
               <option value="en_proceso">En proceso</option>
               <option value="retirado">Retirado</option>
@@ -274,6 +273,78 @@
       </div>
     </section>
   </main>
+
+  <!-- Modal asociar cliente a reserva -->
+  <div id="reserveClientModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reserveClientModalTitle">
+    <div class="admin-modal-panel" style="max-width:520px">
+      <div class="admin-modal-header">
+        <div>
+          <h3 id="reserveClientModalTitle">Reservar vehículo</h3>
+          <span class="muted">Asocia un cliente a esta reserva</span>
+        </div>
+        <button id="reserveClientCancelBtn" class="btn secondary small" aria-label="Cerrar">&times;</button>
+      </div>
+      <input type="hidden" id="reserveClientVehicleId" />
+      <input type="hidden" id="reserveClientOriginalStatus" />
+      <input type="hidden" id="reserveClientId" />
+
+      <div style="margin-bottom:12px">
+        <p class="subsection-title" style="margin:0 0 8px">Buscar cliente existente</p>
+        <input id="reserveClientSearch" placeholder="Nombre, teléfono, email o documento" style="width:100%" />
+        <div id="reserveClientList" class="reserve-client-list"></div>
+      </div>
+
+      <div class="admin-modal-divider"></div>
+
+      <p class="subsection-title" style="margin:0 0 8px">O registrar nuevo cliente</p>
+      <div class="grid two">
+        <input id="reserveClientName" placeholder="Nombre completo" />
+        <input id="reserveClientPhone" placeholder="Teléfono" />
+        <input id="reserveClientEmail" type="email" placeholder="Email" />
+      </div>
+
+      <div class="confirm-actions" style="margin-top:16px">
+        <button id="reserveClientCancelBtn2" class="btn secondary" onclick="document.getElementById('reserveClientCancelBtn').click()">Cancelar</button>
+        <button id="reserveClientConfirmBtn" class="btn primary">Confirmar reserva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal asociar cliente a reserva -->
+  <div id="reserveClientModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reserveClientModalTitle">
+    <div class="admin-modal-panel" style="max-width:520px">
+      <div class="admin-modal-header">
+        <div>
+          <h3 id="reserveClientModalTitle">Reservar vehículo</h3>
+          <span class="muted">Asocia un cliente a esta reserva</span>
+        </div>
+        <button id="reserveClientCancelBtn" class="btn secondary small" aria-label="Cerrar">&times;</button>
+      </div>
+      <input type="hidden" id="reserveClientVehicleId" />
+      <input type="hidden" id="reserveClientOriginalStatus" />
+      <input type="hidden" id="reserveClientId" />
+
+      <div style="margin-bottom:12px">
+        <p class="subsection-title" style="margin:0 0 8px">Buscar cliente existente</p>
+        <input id="reserveClientSearch" placeholder="Nombre, teléfono, email o documento" style="width:100%" />
+        <div id="reserveClientList" class="reserve-client-list"></div>
+      </div>
+
+      <div class="admin-modal-divider"></div>
+
+      <p class="subsection-title" style="margin:0 0 8px">O registrar nuevo cliente</p>
+      <div class="grid two">
+        <input id="reserveClientName" placeholder="Nombre completo" />
+        <input id="reserveClientPhone" placeholder="Teléfono" />
+        <input id="reserveClientEmail" type="email" placeholder="Email" />
+      </div>
+
+      <div class="confirm-actions" style="margin-top:16px">
+        <button class="btn secondary" onclick="document.getElementById('reserveClientCancelBtn').click()">Cancelar</button>
+        <button id="reserveClientConfirmBtn" class="btn primary">Confirmar reserva</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal de imágenes -->
   <div id="imagesModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="imagesTitleText">

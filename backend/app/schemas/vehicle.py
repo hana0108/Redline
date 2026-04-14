@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.enums import VehicleStatus
 
@@ -63,7 +63,27 @@ class VehicleUpdate(BaseModel):
 
 class VehicleStatusUpdate(BaseModel):
     status: VehicleStatus
+    client_id: UUID | None = None
     notes: str | None = None
+
+
+class PublicClientPayload(BaseModel):
+    """Minimal client data captured from public site forms."""
+
+    full_name: str = Field(min_length=2, max_length=180)
+    phone: str | None = Field(default=None, max_length=30)
+    email: EmailStr | None = None
+    document_type: str | None = Field(default=None, max_length=30)
+    document_number: str | None = Field(default=None, max_length=50)
+    notes: str | None = None
+
+
+class PublicReservePayload(BaseModel):
+    client: PublicClientPayload
+
+
+class PublicPurchaseIntentPayload(BaseModel):
+    client: PublicClientPayload
 
 
 class VehicleResponse(VehicleBase):
@@ -71,6 +91,7 @@ class VehicleResponse(VehicleBase):
 
     id: UUID
     status: VehicleStatus
+    reserved_client_id: UUID | None = None
     created_by: UUID | None
     created_at: datetime
     updated_at: datetime

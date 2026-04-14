@@ -295,6 +295,13 @@ CREATE TABLE IF NOT EXISTS redline.client_images (
 
 CREATE INDEX IF NOT EXISTS idx_client_images_client ON redline.client_images(client_id);
 
+-- Back-reference columns that depend on clients existing first
+ALTER TABLE redline.vehicles
+    ADD COLUMN IF NOT EXISTS reserved_client_id uuid REFERENCES redline.clients(id);
+
+ALTER TABLE redline.vehicle_status_history
+    ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES redline.clients(id);
+
 CREATE TABLE IF NOT EXISTS redline.sales (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     vehicle_id uuid NOT NULL UNIQUE REFERENCES redline.vehicles(id),

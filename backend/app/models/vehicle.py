@@ -14,6 +14,7 @@ from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.branch import Branch
+    from app.models.client import Client
 
 
 class Vehicle(Base, TimestampMixin):
@@ -41,9 +42,15 @@ class Vehicle(Base, TimestampMixin):
         default=VehicleStatus.DISPONIBLE,
         server_default=VehicleStatus.DISPONIBLE.value,
     )
+    reserved_client_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("clients.id"), nullable=True
+    )
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     branch: Mapped["Branch"] = relationship("Branch", back_populates="vehicles")
+    reserved_client: Mapped["Client | None"] = relationship(
+        "Client", foreign_keys="Vehicle.reserved_client_id"
+    )
     images: Mapped[list["VehicleImage"]] = relationship(
         "VehicleImage",
         back_populates="vehicle",
@@ -84,6 +91,9 @@ class VehicleStatusHistory(Base, TimestampMixin):
     )
     changed_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("clients.id"), nullable=True
     )
     notes: Mapped[str | None] = mapped_column(Text())
 

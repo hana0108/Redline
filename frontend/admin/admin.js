@@ -10,6 +10,7 @@ let CATALOGS = { brands: [], vehicle_types: [], fuel_types: [], transmissions: [
 let VEHICLE_MODELS = [];
 let ACTIVE_IMAGES_VEHICLE_ID = null;
 let _confirmResolve = null;
+let _reserveStatusResolve = null;  // for reserve-client modal
 
 const STATUS_LABELS = {
   disponible: 'Disponible',
@@ -357,6 +358,7 @@ function renderVehicles() {
   const status = el('vehicleStatusFilter').value;
   const branchId = el('vehicleBranchFilter')?.value || '';
   const filtered = VEHICLES.filter(vehicle => {
+    if (vehicle.status === 'reservado') return false;  // reservados tienen su propia sección
     const text = `${vehicle.brand} ${vehicle.model} ${vehicle.vin} ${vehicle.plate || ''}`.toLowerCase();
     return (!search || text.includes(search))
       && (!status || vehicle.status === status)
@@ -372,7 +374,13 @@ function renderVehicles() {
 function renderReserved() {
   const reserved = VEHICLES.filter(v => v.status === 'reservado');
   el('reservedList').innerHTML = reserved.length
-    ? reserved.map(vehicleCard).join('')
+    ? reserved.map(v => {
+        const clientName = v.reserved_client_id ? getClientName(v.reserved_client_id) : 'Sin cliente asociado';
+        return vehicleCard(v).replace(
+          '<div class="vehicle-actions">',
+          `<div class="reserved-client-info"><span class="meta-pill">Cliente: ${escapeHtml(clientName)}</span></div><div class="vehicle-actions">`
+        );
+      }).join('')
     : '<div class="muted" style="padding: 28px 0; text-align: center;">No hay vehículos reservados actualmente.</div>';
 }
 
@@ -988,13 +996,112 @@ async function handleMainClick(evt) {
   }
 }
 
+function askReserveClient(vehicleId, currentSelectEl) {
+  return new Promise((resolve) => {
+    _reserveStatusResolve = resolve;
+    const modal = el('reserveClientModal');
+    el('reserveClientVehicleId').value = vehicleId;
+    el('reserveClientOriginalStatus').value = currentSelectEl.dataset.prevStatus || '';
+    el('reserveClientSearch').value = '';
+    el('reserveClientId').value = '';
+    el('reserveClientName').value = '';
+    el('reserveClientPhone').value = '';
+    el('reserveClientEmail').value = '';
+    renderReserveClientList('');
+    modal.classList.remove('hidden');
+  });
+}
+
+function renderReserveClientList(search) {
+  const lower = search.toLowerCase();
+  const filtered = CLIENTS.filter(c => {
+    const text = `${c.full_name} ${c.phone || ''} ${c.email || ''} ${c.document_number || ''}`.toLowerCase();
+    return !lower || text.includes(lower);
+  });
+  const list = el('reserveClientList');
+  list.innerHTML = filtered.slice(0, 8).map(c => `
+    <div class="reserve-client-item" data-client-id="${c.id}" data-client-name="${escapeHtml(c.full_name)}">
+      <strong>${escapeHtml(c.full_name)}</strong>
+      <span class="muted">${escapeHtml(c.phone || c.email || '')}</span>
+    </div>
+  `).join('') || '<div class="muted">No se encontraron clientes.</div>';
+  list.querySelectorAll('.reserve-client-item').forEach(item => {
+    item.addEventListener('click', () => {
+      el('reserveClientId').value = item.dataset.clientId;
+      list.querySelectorAll('.reserve-client-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      el('reserveClientName').value = '';
+      el('reserveClientPhone').value = '';
+      el('reserveClientEmail').value = '';
+    });
+  });
+}
+
+async function confirmReserveClient() {
+  const vehicleId = el('reserveClientVehicleId').value;
+  const existingClientId = el('reserveClientId').value;
+  const newName = el('reserveClientName').value.trim();
+  const newPhone = el('reserveClientPhone').value.trim();
+  const newEmail = el('reserveClientEmail').value.trim();
+
+  if (!existingClientId && !newName) {
+    toast('Selecciona un cliente existente o ingresa el nombre del nuevo cliente.', 'error');
+    return;
+  }
+
+  let clientId = existingClientId;
+  try {
+    if (!existingClientId && newName) {
+      const newClient = await window.REDLINE.request('/clients', {
+        method: 'POST',
+        json: {
+          full_name: newName,
+          phone: newPhone || null,
+          email: newEmail || null,
+        },
+      });
+      clientId = newClient.id;
+      await loadClients();
+    }
+    el('reserveClientModal').classList.add('hidden');
+    if (_reserveStatusResolve) {
+      _reserveStatusResolve({ confirmed: true, clientId });
+      _reserveStatusResolve = null;
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+function cancelReserveClient() {
+  el('reserveClientModal').classList.add('hidden');
+  if (_reserveStatusResolve) {
+    _reserveStatusResolve({ confirmed: false });
+    _reserveStatusResolve = null;
+  }
+}
+
 async function handleMainChange(evt) {
   const target = evt.target;
   const action = target?.dataset?.action;
   if (!action) return;
   try {
     if (action === 'status') {
-      await window.REDLINE.request(`/vehicles/${target.dataset.id}/status`, { method: 'PATCH', json: { status: target.value, notes: null } });
+      const newStatus = target.value;
+      if (newStatus === 'reservado') {
+        target.dataset.prevStatus = target.dataset.prevStatus || VEHICLES.find(v => v.id === target.dataset.id)?.status || '';
+        const result = await askReserveClient(target.dataset.id, target);
+        if (!result.confirmed) {
+          target.value = target.dataset.prevStatus || 'disponible';
+          return;
+        }
+        await window.REDLINE.request(`/vehicles/${target.dataset.id}/status`, {
+          method: 'PATCH',
+          json: { status: newStatus, client_id: result.clientId, notes: null },
+        });
+      } else {
+        await window.REDLINE.request(`/vehicles/${target.dataset.id}/status`, { method: 'PATCH', json: { status: newStatus, notes: null } });
+      }
       await loadVehicles();
       return;
     }
@@ -1092,6 +1199,12 @@ function wireUi() {
     if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
   });
 
+  el('reserveClientConfirmBtn').addEventListener('click', confirmReserveClient);
+  el('reserveClientCancelBtn').addEventListener('click', cancelReserveClient);
+  el('reserveClientSearch').addEventListener('input', (evt) => {
+    renderReserveClientList(evt.target.value);
+  });
+
   document.addEventListener('keydown', (evt) => {
     if (evt.key === 'Escape') {
       if (!el('imagesModal').classList.contains('hidden')) closeImagesModal();
@@ -1099,6 +1212,7 @@ function wireUi() {
         el('confirmModal').classList.add('hidden');
         if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
       }
+      if (!el('reserveClientModal').classList.contains('hidden')) cancelReserveClient();
     }
   });
 }

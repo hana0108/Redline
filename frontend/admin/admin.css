@@ -568,3 +568,34 @@ textarea { min-height: 110px; resize: vertical; }
   .meta-grid, .history-grid { grid-template-columns: 1fr; }
   .metrics-extended { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ── Reserve-client modal ──────────────── */
+.reserve-client-list {
+  margin-top: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.reserve-client-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.reserve-client-item:last-child { border-bottom: none; }
+.reserve-client-item:hover, .reserve-client-item.selected {
+  background: var(--surface-2, #f5f7fa);
+}
+.admin-modal-divider {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 16px 0;
+}
+/* Reserved section client info */
+.reserved-client-info {
+  margin: 6px 0 8px;
+}

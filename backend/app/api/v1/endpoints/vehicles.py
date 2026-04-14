@@ -10,12 +10,15 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import require_permissions
 from app.core.config import settings
 from app.db.session import get_db
+from app.models.client import Client
 from app.models.enums import AuditAction, VehicleStatus
 from app.models.branch import Branch
 from app.models.sale import Sale
 from app.models.user import User
 from app.models.vehicle import Vehicle, VehicleImage, VehicleStatusHistory
 from app.schemas.vehicle import (
+    PublicPurchaseIntentPayload,
+    PublicReservePayload,
     VehicleCreate,
     VehicleImageCreate,
     VehicleImageResponse,
@@ -59,6 +62,9 @@ def _public_vehicle_payload(vehicle: Vehicle, branch_name: str) -> dict:
         "vehicle_type": vehicle.vehicle_type,
         "description": vehicle.description,
         "status": vehicle.status.value,
+        "reserved_client_id": str(vehicle.reserved_client_id)
+        if vehicle.reserved_client_id
+        else None,
         "image_url": image_url,
         "created_at": vehicle.created_at.isoformat() if vehicle.created_at else None,
     }
@@ -148,6 +154,7 @@ def get_public_vehicle(
 @router.post("/public/{vehicle_id}/reserve", status_code=status.HTTP_200_OK)
 def reserve_vehicle_public(
     vehicle_id: UUID,
+    payload: PublicReservePayload,
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
     vehicle = db.scalar(select(Vehicle).where(Vehicle.id == vehicle_id))
@@ -158,18 +165,63 @@ def reserve_vehicle_public(
             status_code=409,
             detail="Este vehículo ya no está disponible para reserva",
         )
+
+    client_data = payload.client.model_dump()
+    client = Client(**client_data)
+    db.add(client)
+    db.flush()  # get client.id before commit
+
     vehicle.status = VehicleStatus.RESERVADO
+    vehicle.reserved_client_id = client.id
     db.add(
         VehicleStatusHistory(
             vehicle_id=vehicle.id,
             old_status=VehicleStatus.DISPONIBLE,
             new_status=VehicleStatus.RESERVADO,
             changed_by=None,
+            client_id=client.id,
             notes="Reservado desde portal público",
         )
     )
     db.commit()
-    return {"message": "Vehículo reservado exitosamente"}
+    return {"message": "Vehículo reservado exitosamente", "client_id": str(client.id)}
+
+
+@router.post("/public/{vehicle_id}/purchase_intent", status_code=status.HTTP_200_OK)
+def purchase_intent_public(
+    vehicle_id: UUID,
+    payload: PublicPurchaseIntentPayload,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.id == vehicle_id))
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+    if vehicle.status not in (VehicleStatus.DISPONIBLE, VehicleStatus.RESERVADO):
+        raise HTTPException(
+            status_code=409,
+            detail="Este vehículo no está disponible para proceder con la compra",
+        )
+
+    client_data = payload.client.model_dump()
+    client = Client(**client_data)
+    db.add(client)
+    db.flush()
+
+    old_status = vehicle.status
+    vehicle.status = VehicleStatus.EN_PROCESO
+    vehicle.reserved_client_id = client.id
+    db.add(
+        VehicleStatusHistory(
+            vehicle_id=vehicle.id,
+            old_status=old_status,
+            new_status=VehicleStatus.EN_PROCESO,
+            changed_by=None,
+            client_id=client.id,
+            notes="Solicitud de compra desde portal público",
+        )
+    )
+    db.commit()
+    return {"message": "Solicitud registrada exitosamente", "client_id": str(client.id)}
 
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
@@ -280,12 +332,21 @@ async def update_vehicle_status(
 
     old_status = vehicle.status
     vehicle.status = payload.status
+
+    # Track or clear reserved client
+    if payload.status == VehicleStatus.RESERVADO:
+        if payload.client_id:
+            vehicle.reserved_client_id = payload.client_id
+    else:
+        vehicle.reserved_client_id = None
+
     db.add(
         VehicleStatusHistory(
             vehicle_id=vehicle.id,
             old_status=old_status,
             new_status=payload.status,
             changed_by=current_user.id,
+            client_id=payload.client_id,
             notes=payload.notes,
         )
     )

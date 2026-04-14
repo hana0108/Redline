@@ -128,13 +128,88 @@ function fillModal(vehicle) {
   el('mType').textContent = vehicle.vehicle_type || 'N/D';
   el('mColor').textContent = vehicle.color || 'N/D';
   el('mDescription').textContent = vehicle.description || 'Sin descripción disponible.';
-  el('proceedSaleBtn').href = `login/index.html?vehicle_id=${encodeURIComponent(vehicle.id)}`;
 
   const reserveBtn = el('reserveBtn');
+  const proceedBtn = el('proceedSaleBtn');
   const alreadyReserved = vehicle.status === 'reservado';
   reserveBtn.textContent = alreadyReserved ? 'Reservado' : 'Reservar';
   reserveBtn.disabled = alreadyReserved;
   reserveBtn.dataset.vehicleId = vehicle.id;
+  proceedBtn.dataset.vehicleId = vehicle.id;
+
+  const notAvailable = vehicle.status !== 'disponible' && vehicle.status !== 'reservado';
+  proceedBtn.disabled = notAvailable;
+  proceedBtn.textContent = notAvailable ? 'No disponible' : 'Solicitar compra';
+}
+
+function openClientCapture(vehicleId, action) {
+  el('captureVehicleId').value = vehicleId;
+  el('captureAction').value = action;
+  el('clientCaptureTitle').textContent = action === 'reserve' ? 'Reservar vehículo' : 'Solicitar compra';
+  el('clientCaptureSubtitle').textContent = action === 'reserve'
+    ? 'Ingresa tus datos para reservar este vehículo.'
+    : 'Ingresa tus datos para que procesemos tu solicitud de compra.';
+  el('captureFullName').value = '';
+  el('capturePhone').value = '';
+  el('captureEmail').value = '';
+  el('captureDocType').value = '';
+  el('captureDocNumber').value = '';
+  el('captureNotes').value = '';
+  el('captureFormError').style.display = 'none';
+  el('captureSubmitBtn').disabled = false;
+  el('captureSubmitBtn').textContent = 'Enviar solicitud';
+  el('clientCaptureModal').style.display = 'grid';
+  el('clientCaptureModal').setAttribute('aria-hidden', 'false');
+}
+
+function closeClientCapture() {
+  el('clientCaptureModal').style.display = 'none';
+  el('clientCaptureModal').setAttribute('aria-hidden', 'true');
+}
+
+async function submitClientCapture() {
+  const vehicleId = el('captureVehicleId').value;
+  const action = el('captureAction').value;
+  const fullName = el('captureFullName').value.trim();
+  if (!fullName) {
+    el('captureFormError').textContent = 'El nombre es obligatorio.';
+    el('captureFormError').style.display = 'block';
+    return;
+  }
+  el('captureFormError').style.display = 'none';
+  const btn = el('captureSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const clientPayload = {
+    full_name: fullName,
+    phone: el('capturePhone').value.trim() || null,
+    email: el('captureEmail').value.trim() || null,
+    document_type: el('captureDocType').value || null,
+    document_number: el('captureDocNumber').value.trim() || null,
+    notes: el('captureNotes').value.trim() || null,
+  };
+
+  const endpoint = action === 'reserve'
+    ? `/vehicles/public/${vehicleId}/reserve`
+    : `/vehicles/public/${vehicleId}/purchase_intent`;
+
+  try {
+    await window.REDLINE.request(endpoint, { method: 'POST', json: { client: clientPayload } });
+    closeClientCapture();
+    closeModal();
+    await loadVehicles();
+    toast(action === 'reserve'
+      ? 'Vehículo reservado exitosamente. Nos pondremos en contacto contigo.'
+      : 'Solicitud de compra registrada. Nos pondremos en contacto contigo.',
+      'success'
+    );
+  } catch (e) {
+    el('captureFormError').textContent = e.message || 'No se pudo procesar la solicitud.';
+    el('captureFormError').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Enviar solicitud';
+  }
 }
 
 async function openVehicleModal(vehicleId) {
@@ -173,21 +248,30 @@ function wireEvents() {
     if (evt.target.id === 'vehicleModal') closeModal();
   });
 
-  el('reserveBtn').addEventListener('click', async () => {
+  el('reserveBtn').addEventListener('click', () => {
     const btn = el('reserveBtn');
     const vehicleId = btn.dataset.vehicleId;
     if (!vehicleId || btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = 'Reservando...';
-    try {
-      await window.REDLINE.request(`/vehicles/public/${vehicleId}/reserve`, { method: 'POST' });
-      btn.textContent = 'Reservado';
-      closeModal();
-      await loadVehicles();
-    } catch (e) {
-      btn.textContent = 'Reservar';
-      btn.disabled = false;
-      toast(e.message || 'No se pudo reservar el vehículo.', 'error');
+    openClientCapture(vehicleId, 'reserve');
+  });
+
+  el('proceedSaleBtn').addEventListener('click', () => {
+    const btn = el('proceedSaleBtn');
+    const vehicleId = btn.dataset.vehicleId;
+    if (!vehicleId || btn.disabled) return;
+    openClientCapture(vehicleId, 'purchase_intent');
+  });
+
+  el('closeClientCapture').addEventListener('click', closeClientCapture);
+  el('clientCaptureModal').addEventListener('click', (evt) => {
+    if (evt.target.id === 'clientCaptureModal') closeClientCapture();
+  });
+  el('captureSubmitBtn').addEventListener('click', submitClientCapture);
+
+  document.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Escape') {
+      if (el('clientCaptureModal').style.display !== 'none') closeClientCapture();
+      else closeModal();
     }
   });
 }

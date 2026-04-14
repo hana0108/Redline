@@ -90,13 +90,59 @@
       </div>
       <p id="mDescription" class="modal-description"></p>
       <div class="modal-actions">
-        <a id="proceedSaleBtn" class="btn" href="login/index.html">Proceder a venta</a>
+        <button id="proceedSaleBtn" class="btn">Solicitar compra</button>
         <button id="reserveBtn" class="btn btn-secondary">Reservar</button>
       </div>
     </div>
   </div>
 
   <div id="toastContainer"></div>
+
+  <!-- Modal captura de datos de cliente -->
+  <div id="clientCaptureModal" class="modal-overlay" aria-hidden="true" style="display:none">
+    <div class="modal-panel client-capture-panel">
+      <button id="closeClientCapture" class="close-btn" aria-label="Cerrar">&times;</button>
+      <h4 id="clientCaptureTitle">Reservar vehículo</h4>
+      <p class="modal-branch" id="clientCaptureSubtitle">Ingresa tus datos para procesar la solicitud.</p>
+      <input type="hidden" id="captureVehicleId" />
+      <input type="hidden" id="captureAction" />
+      <div class="capture-form">
+        <label class="capture-field">
+          <span>Nombre completo <span class="required">*</span></span>
+          <input id="captureFullName" placeholder="Tu nombre completo" required />
+        </label>
+        <label class="capture-field">
+          <span>Teléfono</span>
+          <input id="capturePhone" placeholder="809-000-0000" />
+        </label>
+        <label class="capture-field">
+          <span>Email</span>
+          <input id="captureEmail" type="email" placeholder="correo@ejemplo.com" />
+        </label>
+        <div class="capture-row">
+          <label class="capture-field">
+            <span>Tipo de documento</span>
+            <select id="captureDocType">
+              <option value="">Seleccionar</option>
+              <option value="Cédula">Cédula</option>
+              <option value="Pasaporte">Pasaporte</option>
+              <option value="RNC">RNC</option>
+            </select>
+          </label>
+          <label class="capture-field">
+            <span>Número de documento</span>
+            <input id="captureDocNumber" placeholder="000-0000000-0" />
+          </label>
+        </div>
+        <label class="capture-field">
+          <span>Notas adicionales</span>
+          <textarea id="captureNotes" placeholder="¿Algo que debamos saber?" rows="2"></textarea>
+        </label>
+        <div id="captureFormError" class="capture-error" style="display:none"></div>
+        <button id="captureSubmitBtn" class="btn capture-submit">Enviar solicitud</button>
+      </div>
+    </div>
+  </div>
 
   <script src="api.js"></script>
   <script src="index.js"></script>
