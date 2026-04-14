@@ -124,6 +124,18 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
+/* List card in a 2-column grid must fill the stretched height */
+.grid.two-columns-equal > .card:not(.sticky-card),
+.grid.two-columns-wide > .card:not(.sticky-card) {
+  display: flex;
+  flex-direction: column;
+}
+.grid.two-columns-equal > .card:not(.sticky-card) .scrollable-list,
+.grid.two-columns-wide > .card:not(.sticky-card) .scrollable-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
 .grid.two-columns-wide {
   display: grid;
   grid-template-columns: 430px 1fr;
