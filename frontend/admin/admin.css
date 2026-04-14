@@ -129,6 +129,7 @@ body {
 .grid.two-columns-wide > .card:not(.sticky-card) {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .grid.two-columns-equal > .card:not(.sticky-card) .scrollable-list,
 .grid.two-columns-wide > .card:not(.sticky-card) .scrollable-list {
