@@ -70,3 +70,5 @@ def validate_commercial_refs(
 def ensure_vehicle_sellable(db: Session, vehicle: Vehicle) -> None:  # noqa: ARG001
     if vehicle.status == VehicleStatus.VENDIDO:
         raise bad_request("El vehículo ya fue vendido")
+    if vehicle.status == VehicleStatus.RETIRADO:
+        raise bad_request("El vehículo está retirado y no puede ser vendido")

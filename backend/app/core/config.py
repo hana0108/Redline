@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "Redline API"
     APP_ENV: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_V1_STR: str = "/api/v1"
 
     SECRET_KEY: str = "change-this-secret-key"

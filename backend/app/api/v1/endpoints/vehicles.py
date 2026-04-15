@@ -3,7 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import select, func
+from sqlalchemy import or_, select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -172,9 +172,18 @@ def reserve_vehicle_public(
         )
 
     client_data = payload.client.model_dump()
-    client = Client(**client_data)
-    db.add(client)
-    db.flush()  # get client.id before commit
+    dedup_filters = []
+    if payload.client.phone:
+        dedup_filters.append(Client.phone == payload.client.phone)
+    if payload.client.email:
+        dedup_filters.append(Client.email == payload.client.email)
+    existing_client = (
+        db.scalar(select(Client).where(or_(*dedup_filters))) if dedup_filters else None
+    )
+    client = existing_client or Client(**client_data)
+    if not existing_client:
+        db.add(client)
+        db.flush()  # get client.id before commit
 
     vehicle.status = VehicleStatus.RESERVADO
     vehicle.reserved_client_id = client.id
@@ -208,9 +217,18 @@ def purchase_intent_public(
         )
 
     client_data = payload.client.model_dump()
-    client = Client(**client_data)
-    db.add(client)
-    db.flush()
+    dedup_filters = []
+    if payload.client.phone:
+        dedup_filters.append(Client.phone == payload.client.phone)
+    if payload.client.email:
+        dedup_filters.append(Client.email == payload.client.email)
+    existing_client = (
+        db.scalar(select(Client).where(or_(*dedup_filters))) if dedup_filters else None
+    )
+    client = existing_client or Client(**client_data)
+    if not existing_client:
+        db.add(client)
+        db.flush()
 
     old_status = vehicle.status
     vehicle.status = VehicleStatus.EN_PROCESO

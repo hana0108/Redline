@@ -17,11 +17,15 @@ from app.models.client import Client
 from app.models.enums import AuditAction, SaleStatus, VehicleStatus
 from app.models.sale import Sale
 from app.models.user import User
-from app.models.vehicle import Vehicle
+from app.models.vehicle import Vehicle, VehicleStatusHistory
 from app.schemas.sale import SaleCreate, SaleResponse, SaleUpdate
 from app.services.audit import add_audit_log
 from app.services.cache_service import cache_service
-from app.services.commercial_service import ensure_vehicle_sellable, get_sale_or_404, validate_commercial_refs
+from app.services.commercial_service import (
+    ensure_vehicle_sellable,
+    get_sale_or_404,
+    validate_commercial_refs,
+)
 from app.services.pdf_generator import build_sale_pdf
 from app.services.response_service import stream_pdf
 from app.services.settings_service import get_company_info
@@ -76,8 +80,19 @@ async def create_sale(
         notes=payload.notes,
     )
     db.add(sale)
+    old_vehicle_status = refs.vehicle.status
     refs.vehicle.status = VehicleStatus.VENDIDO
     db.flush()
+    db.add(
+        VehicleStatusHistory(
+            vehicle_id=refs.vehicle.id,
+            old_status=old_vehicle_status,
+            new_status=VehicleStatus.VENDIDO,
+            changed_by=current_user.id,
+            client_id=payload.client_id,
+            notes="Venta registrada",
+        )
+    )
 
     add_audit_log(
         db,
@@ -197,6 +212,16 @@ async def delete_sale(
 
     if vehicle:
         vehicle.status = VehicleStatus.DISPONIBLE
+        db.add(
+            VehicleStatusHistory(
+                vehicle_id=vehicle.id,
+                old_status=VehicleStatus.VENDIDO,
+                new_status=VehicleStatus.DISPONIBLE,
+                changed_by=current_user.id,
+                client_id=sale.client_id,
+                notes="Venta eliminada",
+            )
+        )
 
     db.delete(sale)
     add_audit_log(
@@ -235,7 +260,11 @@ def get_sale_pdf(
     vehicle = db.scalar(select(Vehicle).where(Vehicle.id == sale.vehicle_id))
     client = db.scalar(select(Client).where(Client.id == sale.client_id))
     branch = db.scalar(select(Branch).where(Branch.id == sale.branch_id))
-    seller = db.scalar(select(User).where(User.id == sale.seller_user_id)) if sale.seller_user_id else None
+    seller = (
+        db.scalar(select(User).where(User.id == sale.seller_user_id))
+        if sale.seller_user_id
+        else None
+    )
     if not vehicle or not client or not branch:
         raise conflict("La venta tiene referencias incompletas")
 
