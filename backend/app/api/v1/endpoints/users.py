@@ -271,16 +271,15 @@ def delete_user(
         select(User.id).join(Role).where(Role.code == "admin").limit(1)
     ):
         raise HTTPException(
-            status_code=403,
-            detail="No se puede eliminar el administrador principal"
+            status_code=403, detail="No se puede eliminar el administrador principal"
         )
 
     # Validar que no haya ventas registradas por este usuario
-    sale_count = db.scalar(select(func.count(Sale.id)).where(Sale.seller_id == user_id))
+    sale_count = db.scalar(select(func.count(Sale.id)).where(Sale.seller_user_id == user_id))
     if sale_count:
         raise HTTPException(
             status_code=409,
-            detail=f"No se puede eliminar el usuario: tiene {sale_count} venta(s) registrada(s)"
+            detail=f"No se puede eliminar el usuario: tiene {sale_count} venta(s) registrada(s)",
         )
 
     add_audit_log(

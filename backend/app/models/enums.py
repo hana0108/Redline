@@ -31,6 +31,7 @@ class AuditAction(str, Enum):
     UPDATE = "update"
     DELETE = "delete"
     LOGIN = "login"
+    LOGIN_FAILED = "login_failed"
     LOGOUT = "logout"
     STATUS_CHANGE = "status_change"
     SALE = "sale"
