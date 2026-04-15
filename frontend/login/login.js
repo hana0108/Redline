@@ -8,7 +8,9 @@ async function onLogin(evt) {
   const email = el("email").value.trim();
   const password = el("password").value;
 
-  el("loginStatus").textContent = "Iniciando sesión...";
+  const statusEl = el("loginStatus");
+  statusEl.textContent = "Iniciando sesión...";
+  statusEl.style.color = "";
 
   try {
     const res = await window.REDLINE.request("/auth/login", {
@@ -21,13 +23,15 @@ async function onLogin(evt) {
     }
 
     window.REDLINE.setToken(res.access_token);
-    el("loginStatus").textContent = "✅ Login exitoso. Redirigiendo al backoffice...";
+    statusEl.textContent = "Acceso concedido. Redirigiendo...";
+    statusEl.style.color = "#16a34a";
 
     setTimeout(() => {
       window.location.href = "../admin/index.html";
     }, 400);
   } catch (e) {
-    el("loginStatus").textContent = `❌ ${e.message || "Error inesperado"}`;
+    statusEl.textContent = e.message || "Error inesperado";
+    statusEl.style.color = "#dc2626";
   }
 }
 

@@ -46,18 +46,42 @@ def unset_cover_images(db: Session, client_id: UUID) -> None:
     db.query(ClientImage).filter(ClientImage.client_id == client_id).update({"is_cover": False})
 
 
+_ALLOWED_CLIENT_IMAGE_SIGNATURES: dict[bytes, str] = {
+    b"\xff\xd8\xff": ".jpg",
+    b"\x89PNG": ".png",
+    b"GIF8": ".gif",
+    b"RIFF": ".webp",  # RIFF....WEBP — checked below
+}
+_MAX_CLIENT_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
 async def save_client_upload(*, client_id: UUID, file: UploadFile) -> str:
     if not file.filename:
         raise ValueError("Archivo inválido")
 
-    suffix = Path(file.filename).suffix.lower() or ".bin"
+    content = await file.read()
+
+    if len(content) > _MAX_CLIENT_UPLOAD_BYTES:
+        raise ValueError("El archivo supera el tamaño máximo permitido de 10 MB")
+
+    detected_suffix: str | None = None
+    for magic, ext in _ALLOWED_CLIENT_IMAGE_SIGNATURES.items():
+        if content[: len(magic)].startswith(magic):
+            if ext == ".webp" and content[8:12] != b"WEBP":
+                continue
+            detected_suffix = ext
+            break
+    if detected_suffix is None:
+        raise ValueError(
+            "Tipo de archivo no permitido. Solo se aceptan imágenes JPEG, PNG, GIF o WebP"
+        )
+
     relative_dir = Path("clients") / str(client_id)
     absolute_dir = settings.media_path / relative_dir
     absolute_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = f"{uuid4().hex}{suffix}"
+    filename = f"{uuid4().hex}{detected_suffix}"
     absolute_path = absolute_dir / filename
-    content = await file.read()
     absolute_path.write_bytes(content)
 
     return f"{settings.MEDIA_URL}/{relative_dir.as_posix()}/{filename}"

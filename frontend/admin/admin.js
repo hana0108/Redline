@@ -1288,6 +1288,7 @@ function wireUi() {
 
   el('reserveClientConfirmBtn').addEventListener('click', confirmReserveClient);
   el('reserveClientCancelBtn').addEventListener('click', cancelReserveClient);
+  el('reserveClientCancelBtn2').addEventListener('click', () => el('reserveClientCancelBtn').click());
   el('reserveClientSearch').addEventListener('input', (evt) => {
     renderReserveClientList(evt.target.value);
   });

@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import distinct, select
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.search import (
     ClientSearchFilter,
     ClientSearchResponse,
@@ -21,6 +23,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("/vehicles", response_model=VehicleSearchResponse)
 async def search_vehicles(
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_user)],
     q: Annotated[str, Query(description="Search query", min_length=1)],
     branch_id: Annotated[UUID | None, Query(description="Filter by branch UUID")] = None,
     status: Annotated[str | None, Query(description="Filter by vehicle status")] = None,
@@ -57,6 +60,7 @@ async def search_vehicles(
 @router.get("/clients", response_model=ClientSearchResponse)
 async def search_clients(
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_user)],
     q: Annotated[str, Query(description="Search query", min_length=1)],
     document_type: Annotated[str | None, Query(description="Filter by document type")] = None,
     limit: Annotated[int, Query(description="Results per page", ge=1, le=100)] = 50,
@@ -76,6 +80,7 @@ async def search_clients(
 @router.get("", response_model=UnifiedSearchResponse)
 async def unified_search(
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_user)],
     q: Annotated[str, Query(description="Search query across all entities", min_length=1)],
     entity_type: Annotated[
         str | None,
@@ -95,6 +100,7 @@ async def unified_search(
 @router.get("/suggest")
 async def search_suggestions(
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_user)],
     q: Annotated[str, Query(description="Partial search query", min_length=1, max_length=50)],
     entity_type: Annotated[
         str | None, Query(description="Entity type for suggestions", pattern="^(vehicles|clients)$")

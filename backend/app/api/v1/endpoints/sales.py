@@ -147,7 +147,7 @@ async def update_sale(
         if not branch:
             raise HTTPException(status_code=404, detail="Sucursal no encontrada")
 
-    if "seller_user_id" in update_data and update_data["seller_user_id"]:
+    if "seller_user_id" in update_data and update_data["seller_user_id"] is not None:
         seller = db.get(User, update_data["seller_user_id"])
         if not seller:
             raise HTTPException(status_code=404, detail="Vendedor no encontrado")
