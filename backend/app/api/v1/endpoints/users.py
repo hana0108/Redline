@@ -96,7 +96,12 @@ def create_user(
         status=payload.status,
     )
     db.add(user)
-    db.flush()
+
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Email duplicado o datos inválidos") from exc
 
     for branch_id in payload.branch_ids:
         db.add(UserBranchAccess(user_id=user.id, branch_id=branch_id))
@@ -266,13 +271,19 @@ def delete_user(
     if user.id == current_user.id:
         raise HTTPException(status_code=403, detail="No puedes eliminar tu propio usuario")
 
-    # No permitir eliminar admin principal
-    if user.role.code == "admin" and user.id == db.scalar(
-        select(User.id).join(Role).where(Role.code == "admin").limit(1)
-    ):
-        raise HTTPException(
-            status_code=403, detail="No se puede eliminar el administrador principal"
+    # No permitir eliminar admin principal (primer admin creado)
+    if user.role and user.role.code == "admin":
+        first_admin_id = db.scalar(
+            select(User.id)
+            .join(Role)
+            .where(Role.code == "admin")
+            .order_by(User.created_at.asc())
+            .limit(1)
         )
+        if user.id == first_admin_id:
+            raise HTTPException(
+                status_code=403, detail="No se puede eliminar el administrador principal"
+            )
 
     # Validar que no haya ventas registradas por este usuario
     sale_count = db.scalar(select(func.count(Sale.id)).where(Sale.seller_user_id == user_id))

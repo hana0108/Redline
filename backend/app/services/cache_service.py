@@ -188,12 +188,20 @@ class CacheService:
 
         async def _get_settings():
             from app.db.session import SessionLocal
-            from app.services.settings_service import settings_service
+            from app.services.settings_service import get_settings as _db_get_settings
 
             db = SessionLocal()
             try:
-                settings_data = await settings_service.get_settings(db)
-                return settings_data.model_dump() if settings_data else None
+                s = _db_get_settings(db)
+                if s is None:
+                    return None
+                # Convert ORM object to plain dict — str() handles UUID/datetime
+                return {
+                    col.name: (
+                        str(getattr(s, col.name)) if getattr(s, col.name) is not None else None
+                    )
+                    for col in type(s).__table__.columns
+                }
             finally:
                 db.close()
 

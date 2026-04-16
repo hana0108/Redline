@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, File, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -66,9 +66,9 @@ def list_documents(
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: Annotated[UploadFile, File()],
-    entity_type: str,
-    entity_id: UUID,
-    document_type: str,
+    entity_type: Annotated[str, Form()],
+    entity_id: Annotated[UUID, Form()],
+    document_type: Annotated[str, Form()],
     db: Annotated[Session, Depends(get_db)] = None,
     current_user: Annotated[User, Depends(require_permissions("documents.write"))] = None,
 ) -> DocumentResponse:
@@ -76,9 +76,12 @@ async def upload_document(
     validate_entity_exists(db, entity_type, entity_id)
 
     # Guardar archivo
-    public_path = await save_document_upload(
-        entity_type=entity_type, entity_id=entity_id, document_type=document_type, file=file
-    )
+    try:
+        public_path = await save_document_upload(
+            entity_type=entity_type, entity_id=entity_id, document_type=document_type, file=file
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # Crear registro en BD
     document = Document(

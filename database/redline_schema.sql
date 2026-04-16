@@ -28,7 +28,7 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE t.typname = 'audit_action' AND n.nspname = 'redline') THEN
-        CREATE TYPE redline.audit_action AS ENUM ('create', 'update', 'delete', 'login', 'logout', 'status_change', 'sale');
+        CREATE TYPE redline.audit_action AS ENUM ('create', 'update', 'delete', 'login', 'login_failed', 'logout', 'status_change', 'sale');
     END IF;
 END $$;
 

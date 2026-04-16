@@ -34,10 +34,7 @@ class SearchService:
         self.max_limit = 100
 
     async def search_vehicles(
-        self,
-        db: Session,
-        filters: VehicleSearchFilter,
-        include_facets: bool = False
+        self, db: Session, filters: VehicleSearchFilter, include_facets: bool = False
     ) -> VehicleSearchResponse:
         """Advanced vehicle search with FTS and filters"""
         logger.debug(f"Searching vehicles with query: {filters.query}")
@@ -52,35 +49,36 @@ class SearchService:
         total_query = select(func.count()).select_from(base_query.subquery())
         total = db.scalar(total_query) or 0
 
-        # Apply pagination and ordering
-        query = base_query.order_by(
-            text("relevance DESC"),
-            Vehicle.created_at.desc()
-        ).limit(filters.limit).offset(filters.offset)
+        # Apply pagination and ordering (no FTS relevance column yet — ILIKE fallback)
+        query = (
+            base_query.order_by(Vehicle.created_at.desc())
+            .limit(filters.limit)
+            .offset(filters.offset)
+        )
 
         # Execute query with joins for branch info
-        results = db.execute(
-            query.options(joinedload(Vehicle.branch))
-        ).unique().scalars().all()
+        results = db.execute(query.options(joinedload(Vehicle.branch))).unique().scalars().all()
 
         # Convert to response format
         search_results = []
         for vehicle in results:
             # Get relevance score from the query result
-            relevance = getattr(vehicle, '_relevance', 0.0)
+            relevance = getattr(vehicle, "_relevance", 0.0)
 
-            search_results.append(VehicleSearchResult(
-                id=vehicle.id,
-                relevance=relevance,
-                brand=vehicle.brand,
-                model=vehicle.model,
-                vehicle_year=vehicle.vehicle_year,
-                price=vehicle.price,
-                vin=vehicle.vin,
-                plate=vehicle.plate,
-                status=vehicle.status,
-                branch_name=vehicle.branch.name if vehicle.branch else None
-            ))
+            search_results.append(
+                VehicleSearchResult(
+                    id=vehicle.id,
+                    relevance=relevance,
+                    brand=vehicle.brand,
+                    model=vehicle.model,
+                    vehicle_year=vehicle.vehicle_year,
+                    price=vehicle.price,
+                    vin=vehicle.vin,
+                    plate=vehicle.plate,
+                    status=vehicle.status,
+                    branch_name=vehicle.branch.name if vehicle.branch else None,
+                )
+            )
 
         # Get facets if requested
         facets = None
@@ -92,13 +90,11 @@ class SearchService:
             total=total,
             facets=facets,
             query=filters.query,
-            filters_applied=self._get_applied_filters(filters)
+            filters_applied=self._get_applied_filters(filters),
         )
 
     async def search_clients(
-        self,
-        db: Session,
-        filters: ClientSearchFilter
+        self, db: Session, filters: ClientSearchFilter
     ) -> ClientSearchResponse:
         """Advanced client search with FTS and filters"""
         logger.debug(f"Searching clients with query: {filters.query}")
@@ -113,11 +109,12 @@ class SearchService:
         total_query = select(func.count()).select_from(base_query.subquery())
         total = db.scalar(total_query) or 0
 
-        # Apply pagination and ordering
-        query = base_query.order_by(
-            text("relevance DESC"),
-            Client.created_at.desc()
-        ).limit(filters.limit).offset(filters.offset)
+        # Apply pagination and ordering (no FTS relevance column yet — ILIKE fallback)
+        query = (
+            base_query.order_by(Client.created_at.desc())
+            .limit(filters.limit)
+            .offset(filters.offset)
+        )
 
         # Execute query
         results = db.execute(query).scalars().all()
@@ -125,31 +122,29 @@ class SearchService:
         # Convert to response format
         search_results = []
         for client in results:
-            relevance = getattr(client, '_relevance', 0.0)
+            relevance = getattr(client, "_relevance", 0.0)
 
-            search_results.append(ClientSearchResult(
-                id=client.id,
-                relevance=relevance,
-                full_name=client.full_name,
-                email=client.email,
-                phone=client.phone,
-                document_number=client.document_number,
-                branch_name=None  # Clients don't have branch relationship
-            ))
+            search_results.append(
+                ClientSearchResult(
+                    id=client.id,
+                    relevance=relevance,
+                    full_name=client.full_name,
+                    email=client.email,
+                    phone=client.phone,
+                    document_number=client.document_number,
+                    branch_name=None,  # Clients don't have branch relationship
+                )
+            )
 
         return ClientSearchResponse(
             results=search_results,
             total=total,
             query=filters.query,
-            filters_applied=self._get_applied_filters(filters)
+            filters_applied=self._get_applied_filters(filters),
         )
 
     async def unified_search(
-        self,
-        db: Session,
-        query: str,
-        entity_type: Optional[str] = None,
-        limit_per_type: int = 10
+        self, db: Session, query: str, entity_type: Optional[str] = None, limit_per_type: int = 10
     ) -> UnifiedSearchResponse:
         """Unified search across all entities"""
         logger.debug(f"Unified search: {query}, entity_type: {entity_type}")
@@ -275,57 +270,57 @@ class SearchService:
 
         # Get distinct values for each facet
         facets.statuses = db.scalars(
-            base_query.with_entities(func.distinct(Vehicle.status))
-            .where(Vehicle.status.isnot(None))
+            base_query.with_entities(func.distinct(Vehicle.status)).where(
+                Vehicle.status.isnot(None)
+            )
         ).all()
 
         facets.brands = db.scalars(
-            base_query.with_entities(func.distinct(Vehicle.brand))
-            .where(Vehicle.brand.isnot(None))
+            base_query.with_entities(func.distinct(Vehicle.brand)).where(Vehicle.brand.isnot(None))
         ).all()
 
         facets.fuel_types = db.scalars(
-            base_query.with_entities(func.distinct(Vehicle.fuel_type))
-            .where(Vehicle.fuel_type.isnot(None))
+            base_query.with_entities(func.distinct(Vehicle.fuel_type)).where(
+                Vehicle.fuel_type.isnot(None)
+            )
         ).all()
 
         facets.transmissions = db.scalars(
-            base_query.with_entities(func.distinct(Vehicle.transmission))
-            .where(Vehicle.transmission.isnot(None))
+            base_query.with_entities(func.distinct(Vehicle.transmission)).where(
+                Vehicle.transmission.isnot(None)
+            )
         ).all()
 
         facets.vehicle_types = db.scalars(
-            base_query.with_entities(func.distinct(Vehicle.vehicle_type))
-            .where(Vehicle.vehicle_type.isnot(None))
+            base_query.with_entities(func.distinct(Vehicle.vehicle_type)).where(
+                Vehicle.vehicle_type.isnot(None)
+            )
         ).all()
 
         # Get price range
         price_stats = db.execute(
             select(
-                func.min(Vehicle.price).label('min_price'),
-                func.max(Vehicle.price).label('max_price')
+                func.min(Vehicle.price).label("min_price"),
+                func.max(Vehicle.price).label("max_price"),
             ).select_from(base_query.subquery())
         ).first()
 
         if price_stats and price_stats.min_price is not None:
             facets.price_range = {
-                'min': float(price_stats.min_price),
-                'max': float(price_stats.max_price)
+                "min": float(price_stats.min_price),
+                "max": float(price_stats.max_price),
             }
 
         # Get year range
         year_stats = db.execute(
             select(
-                func.min(Vehicle.vehicle_year).label('min_year'),
-                func.max(Vehicle.vehicle_year).label('max_year')
+                func.min(Vehicle.vehicle_year).label("min_year"),
+                func.max(Vehicle.vehicle_year).label("max_year"),
             ).select_from(base_query.subquery())
         ).first()
 
         if year_stats and year_stats.min_year is not None:
-            facets.year_range = {
-                'min': int(year_stats.min_year),
-                'max': int(year_stats.max_year)
-            }
+            facets.year_range = {"min": int(year_stats.min_year), "max": int(year_stats.max_year)}
 
         return facets
 
@@ -359,7 +354,7 @@ class SearchService:
                 Sale.id,
                 Sale.sale_date,
                 Sale.sale_price,
-                Client.full_name.label('client_name'),
+                Client.full_name.label("client_name"),
                 Vehicle.brand,
                 Vehicle.model,
                 Vehicle.vehicle_year,
@@ -367,12 +362,7 @@ class SearchService:
             .select_from(Sale)
             .join(Vehicle, Vehicle.id == Sale.vehicle_id)
             .join(Client, Client.id == Sale.client_id)
-            .where(
-                or_(
-                    and_(*vehicle_conditions),
-                    and_(*client_conditions)
-                )
-            )
+            .where(or_(and_(*vehicle_conditions), and_(*client_conditions)))
             .order_by(Sale.sale_date.desc())
             .limit(limit)
         )
@@ -386,7 +376,7 @@ class SearchService:
                 sale_date=row.sale_date.isoformat(),
                 sale_price=float(row.sale_price),
                 client_name=row.client_name,
-                vehicle_info=f"{row.brand} {row.model} {row.vehicle_year}"
+                vehicle_info=f"{row.brand} {row.model} {row.vehicle_year}",
             )
             for row in results
         ]
@@ -422,7 +412,7 @@ class SearchService:
         role_names = {
             "admin": "Administrator",
             "manager": "Manager",
-            "sales": "Sales Representative"
+            "sales": "Sales Representative",
         }
 
         return [
@@ -432,7 +422,7 @@ class SearchService:
                 full_name=row.full_name,
                 email=row.email,
                 role_name=role_names.get(row.role_id, "Unknown"),
-                branch_name=None  # Could be added with join if needed
+                branch_name=None,  # Could be added with join if needed
             )
             for row in results
         ]

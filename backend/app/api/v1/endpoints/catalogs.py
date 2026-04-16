@@ -79,7 +79,7 @@ def get_vehicle_models(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[User, Depends(require_permissions("vehicles.read"))],
     brand_code: Annotated[str | None, Query(description="Filtrar por marca (name o code)")] = None,
-) -> list[dict[str, str | int]]:
+) -> list[dict[str, str | int | None]]:
     # Try catalog tables first
     count = db.scalar(select(func.count()).select_from(VehicleModelCatalog))
     if count:

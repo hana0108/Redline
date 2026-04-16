@@ -79,7 +79,7 @@ def list_vehicles(
     branch_id: UUID | None = None,
     search: str | None = None,
 ) -> list[Vehicle]:
-    query = select(Vehicle)
+    query = select(Vehicle).options(selectinload(Vehicle.images))
     if status_filter:
         query = query.where(Vehicle.status == status_filter)
     if branch_id:
