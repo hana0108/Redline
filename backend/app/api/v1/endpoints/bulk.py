@@ -25,6 +25,8 @@ from app.services.bulk_service import (
 
 router = APIRouter(prefix="/bulk", tags=["bulk"])
 
+_MAX_CSV_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 @router.post("/vehicles", response_model=BulkOperationResponse)
 async def bulk_create_vehicles(
@@ -53,23 +55,29 @@ async def import_vehicles_csv(
     current_user: Annotated[User, Depends(require_permissions("vehicles.write"))],
 ) -> CSVImportResponse:
     """Import vehicles from CSV file"""
-    if not file.filename.endswith('.csv'):
+    if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Solo archivos CSV son permitidos")
 
     # Validate CSV headers
     content = await file.read()
-    text_content = content.decode('utf-8')
+    if len(content) > _MAX_CSV_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="El archivo CSV supera el límite de 10 MB")
+    try:
+        text_content = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=400, detail="El archivo CSV debe estar codificado en UTF-8"
+        ) from exc
 
-    required_headers = ['branch_id', 'brand', 'model', 'vehicle_year', 'price', 'vin']
+    required_headers = ["branch_id", "brand", "model", "vehicle_year", "price", "vin"]
     missing = validate_csv_headers(text_content, required_headers)
     if missing:
         raise HTTPException(
-            status_code=400,
-            detail=f"Headers requeridos faltantes: {', '.join(missing)}"
+            status_code=400, detail=f"Headers requeridos faltantes: {', '.join(missing)}"
         )
 
     # Reset file pointer
-    await file.seek(0)
+    file.file.seek(0)
 
     # Process CSV
     valid_vehicles, csv_errors = await process_csv_import(
@@ -91,9 +99,11 @@ async def import_vehicles_csv(
             processed=len(valid_vehicles) + len(csv_errors),
             successful=successful,
             failed=failed,
-            errors=csv_errors
+            errors=csv_errors,
         ),
-        created_ids=[r.id for r in bulk_result.results if r.success and r.id] if valid_vehicles else []
+        created_ids=[r.id for r in bulk_result.results if r.success and r.id]
+        if valid_vehicles
+        else [],
     )
 
 
@@ -104,23 +114,29 @@ async def import_clients_csv(
     current_user: Annotated[User, Depends(require_permissions("clients.write"))],
 ) -> CSVImportResponse:
     """Import clients from CSV file"""
-    if not file.filename.endswith('.csv'):
+    if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Solo archivos CSV son permitidos")
 
     # Validate CSV headers
     content = await file.read()
-    text_content = content.decode('utf-8')
+    if len(content) > _MAX_CSV_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="El archivo CSV supera el límite de 10 MB")
+    try:
+        text_content = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=400, detail="El archivo CSV debe estar codificado en UTF-8"
+        ) from exc
 
-    required_headers = ['full_name', 'email']
+    required_headers = ["full_name", "email"]
     missing = validate_csv_headers(text_content, required_headers)
     if missing:
         raise HTTPException(
-            status_code=400,
-            detail=f"Headers requeridos faltantes: {', '.join(missing)}"
+            status_code=400, detail=f"Headers requeridos faltantes: {', '.join(missing)}"
         )
 
     # Reset file pointer
-    await file.seek(0)
+    file.file.seek(0)
 
     # Process CSV
     valid_clients, csv_errors = await process_csv_import(
@@ -142,9 +158,11 @@ async def import_clients_csv(
             processed=len(valid_clients) + len(csv_errors),
             successful=successful,
             failed=failed,
-            errors=csv_errors
+            errors=csv_errors,
         ),
-        created_ids=[r.id for r in bulk_result.results if r.success and r.id] if valid_clients else []
+        created_ids=[r.id for r in bulk_result.results if r.success and r.id]
+        if valid_clients
+        else [],
     )
 
 
@@ -159,8 +177,8 @@ def get_vehicle_csv_template():
         "content": template,
         "headers": {
             "Content-Type": "text/csv",
-            "Content-Disposition": "attachment; filename=vehicle_import_template.csv"
-        }
+            "Content-Disposition": "attachment; filename=vehicle_import_template.csv",
+        },
     }
 
 
@@ -175,6 +193,6 @@ Juan Pérez,juan@email.com,+18091234567,cedula,001123456789,Santo Domingo,Client
         "content": template,
         "headers": {
             "Content-Type": "text/csv",
-            "Content-Disposition": "attachment; filename=client_import_template.csv"
-        }
+            "Content-Disposition": "attachment; filename=client_import_template.csv",
+        },
     }

@@ -102,6 +102,8 @@ def list_public_vehicles(
     branch_id: UUID | None = None,
     search: str | None = None,
     status_filter: str | None = Query(default="disponible", alias="status"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ) -> list[dict]:
     query = select(Vehicle).options(selectinload(Vehicle.images))
 
@@ -118,7 +120,7 @@ def list_public_vehicles(
             | Vehicle.plate.ilike(like)
         )
 
-    query = query.order_by(Vehicle.created_at.desc())
+    query = query.order_by(Vehicle.created_at.desc()).limit(limit).offset(offset)
     vehicles = list(db.scalars(query).all())
 
     branch_ids = {item.branch_id for item in vehicles}

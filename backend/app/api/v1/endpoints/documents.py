@@ -3,7 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_permissions
@@ -12,7 +12,12 @@ from app.db.session import get_db
 from app.models.document import Document
 from app.models.enums import AuditAction
 from app.models.user import User
-from app.schemas.document import DocumentCreate, DocumentResponse, DocumentUpdate, DocumentListResponse
+from app.schemas.document import (
+    DocumentCreate,
+    DocumentResponse,
+    DocumentUpdate,
+    DocumentListResponse,
+)
 from app.services.audit import add_audit_log
 from app.services.document_service import (
     get_document_or_404,
@@ -46,13 +51,14 @@ def list_documents(
     query = query.order_by(Document.created_at.desc()).offset(skip).limit(limit)
 
     documents = list(db.scalars(query).all())
-    total = db.scalar(
-        select(Document).where(
-            *(Document.entity_type == entity_type,) if entity_type else (),
-            *(Document.entity_id == entity_id,) if entity_id else (),
-            *(Document.document_type == document_type,) if document_type else (),
-        ).count()
-    )
+    count_query = select(func.count(Document.id))
+    if entity_type:
+        count_query = count_query.where(Document.entity_type == entity_type)
+    if entity_id:
+        count_query = count_query.where(Document.entity_id == entity_id)
+    if document_type:
+        count_query = count_query.where(Document.document_type == document_type)
+    total = db.scalar(count_query) or 0
 
     return DocumentListResponse(documents=documents, total=total or 0)
 
@@ -71,10 +77,7 @@ async def upload_document(
 
     # Guardar archivo
     public_path = await save_document_upload(
-        entity_type=entity_type,
-        entity_id=entity_id,
-        document_type=document_type,
-        file=file
+        entity_type=entity_type, entity_id=entity_id, document_type=document_type, file=file
     )
 
     # Crear registro en BD
@@ -132,7 +135,7 @@ def download_document(
         return {
             "url": document.file_path,
             "filename": local_path.name,
-            "content_type": "application/octet-stream"  # Generic, could be improved
+            "content_type": "application/octet-stream",  # Generic, could be improved
         }
 
     raise HTTPException(status_code=404, detail="Archivo no accesible")

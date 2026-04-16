@@ -51,6 +51,7 @@ async def warmup_cache(
         raise HTTPException(status_code=500, detail=f"Cache warmup failed: {str(e)}") from e
 
 
+@router.get("/keys")
 async def list_cache_keys(
     _: Annotated[User, Depends(require_permissions("settings.read"))],
     pattern: str = "*",
