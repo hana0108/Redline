@@ -331,7 +331,7 @@ function renderUsers() {
   }
   container.innerHTML = USERS.map(user => {
     const isActive = user.status === 'active';
-    const roleName = user.role?.name || '?';
+    const roleName = user.role?.name || (typeof user.role === 'string' ? user.role : '?');
     const branchNames = (user.branch_ids || [])
       .map(bid => BRANCHES.find(b => b.id === bid)?.name || bid)
       .join(', ') || 'Sin sucursal';
