@@ -36,6 +36,20 @@ alembic stamp head
 python3 -m app.db.seed_auth
 ```
 
+### 4. Datos demo (opcional)
+
+El seed de demo **no se ejecuta automáticamente**. Para cargar datos de presentación
+(sucursales, usuarios, clientes, vehículos y ventas de ejemplo) ejecutar manualmente:
+
+```bash
+python3 -m app.db.seed_demo
+```
+
+Crea ~162 registros. Idempotente: si los datos ya existen, no hace nada.
+Contraseña de los usuarios demo: `Demo123*`
+
+> **Nota**: No correr en producción con datos reales.
+
 ### 4. Ejecutar servidor
 
 ```bash

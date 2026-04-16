@@ -23,3 +23,16 @@ Quedaron retirados del alcance:
 - leads
 - reservas
 - portal público de ventas y favoritos
+
+## Datos demo
+
+Para cargar datos de presentación ejecutar manualmente desde el backend:
+
+```bash
+cd backend
+source .deps/bin/activate
+python3 -m app.db.seed_demo
+```
+
+Contraseña de usuarios demo: `Demo123*`
+El proceso es idempotente y **no se ejecuta automáticamente** al iniciar la aplicación.

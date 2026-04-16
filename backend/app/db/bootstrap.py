@@ -86,8 +86,3 @@ def bootstrap_database() -> None:
 
     if vehicle_catalogs_seed_sql.exists():
         _execute_sql_file(vehicle_catalogs_seed_sql)
-
-    # Demo seed — idempotent, skips if data already exists
-    from app.db.seed_demo import run as seed_demo_run  # noqa: PLC0415
-
-    seed_demo_run()
