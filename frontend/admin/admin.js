@@ -3,6 +3,7 @@ function el(id) { return document.getElementById(id); }
 let CURRENT_USER = null;
 let BRANCHES = [];
 let USERS = [];
+let ROLES = [];
 let VEHICLES = [];
 let CLIENTS = [];
 let SALES = [];
@@ -11,6 +12,39 @@ let VEHICLE_MODELS = [];
 let ACTIVE_IMAGES_VEHICLE_ID = null;
 let _confirmResolve = null;
 let _reserveStatusResolve = null;  // for reserve-client modal
+
+// ── Page navigation ──────────────────────────────────────────────────────────
+
+const PAGE_MAP = {
+  dashboard: 'pageDashboard',
+  branches:  'pageBranches',
+  inventory: 'pageInventory',
+  clients:   'pageClients',
+  sales:     'pageSales',
+  users:     'pageUsers',
+  roles:     'pageRoles',
+  settings:  'pageSettings',
+};
+
+let CURRENT_PAGE = 'dashboard';
+
+function navigateTo(page) {
+  if (!PAGE_MAP[page]) return;
+  CURRENT_PAGE = page;
+
+  // Toggle page visibility
+  Object.values(PAGE_MAP).forEach(id => {
+    const node = el(id);
+    if (node) node.classList.add('hidden');
+  });
+  const active = el(PAGE_MAP[page]);
+  if (active) active.classList.remove('hidden');
+
+  // Update nav active state
+  document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+}
 
 const STATUS_LABELS = {
   disponible: 'Disponible',
@@ -283,6 +317,164 @@ async function loadUsers() {
     }
   }
   setText('metricPermissions', String(USERS.length));
+  renderUsers();
+  populateSelect('userRole', ROLES, 'Selecciona un rol', el('userRole')?.value,
+    (r) => ({ value: r.id, label: r.name }));
+}
+
+function renderUsers() {
+  const container = el('userList');
+  if (!container) return;
+  if (!USERS.length) {
+    container.innerHTML = '<p class="muted" style="padding:12px">No hay usuarios registrados.</p>';
+    return;
+  }
+  container.innerHTML = USERS.map(user => {
+    const isActive = user.status === 'active';
+    const roleName = user.role?.name || '?';
+    const branchNames = (user.branch_ids || [])
+      .map(bid => BRANCHES.find(b => b.id === bid)?.name || bid)
+      .join(', ') || 'Sin sucursal';
+    return `
+      <div class="user-card">
+        <div class="user-card-header">
+          <div>
+            <h4>${escapeHtml(user.full_name)}</h4>
+            <span class="badge ${isActive ? 'available' : 'other'}">${isActive ? 'Activo' : 'Inactivo'}</span>
+            <span class="badge info">${escapeHtml(roleName)}</span>
+          </div>
+          <div class="entity-actions">
+            <button class="btn secondary small" data-action="edit-user" data-id="${user.id}">Editar</button>
+            <button class="btn warning small" data-action="toggle-user" data-id="${user.id}" data-status="${user.status}">
+              ${isActive ? 'Desactivar' : 'Activar'}
+            </button>
+            <button class="btn danger small" data-action="delete-user" data-id="${user.id}">Eliminar</button>
+          </div>
+        </div>
+        <div class="user-meta">
+          <span>✉ ${escapeHtml(user.email)}</span>
+          ${user.phone ? `<span>📞 ${escapeHtml(user.phone)}</span>` : ''}
+          <span>🏢 ${escapeHtml(branchNames)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function fillUserForm(user) {
+  el('userId').value = user.id;
+  el('userFullName').value = user.full_name || '';
+  el('userEmail').value = user.email || '';
+  el('userPhone').value = user.phone || '';
+  el('userPassword').value = '';
+  el('userPassword').required = false;
+  el('userPassword').placeholder = 'Contraseña (dejar vacío para no cambiar)';
+  el('userRole').value = user.role?.id || '';
+  setText('userFormTitle', 'Editar usuario');
+  setText('userSubmitBtn', 'Guardar cambios');
+  renderBranchesChecklist(user.branch_ids || []);
+  navigateTo('users');
+}
+
+function resetUserForm() {
+  el('userId').value = '';
+  el('userFullName').value = '';
+  el('userEmail').value = '';
+  el('userPhone').value = '';
+  el('userPassword').value = '';
+  el('userPassword').required = true;
+  el('userPassword').placeholder = 'Contraseña (mín. 8 caracteres)';
+  el('userRole').value = '';
+  setText('userFormTitle', 'Nuevo usuario');
+  setText('userSubmitBtn', 'Crear usuario');
+  showMessage('userFormStatus', '');
+  renderBranchesChecklist([]);
+}
+
+function renderBranchesChecklist(selectedIds = []) {
+  const container = el('userBranchesChecklist');
+  if (!container) return;
+  if (!BRANCHES.length) {
+    container.innerHTML = '<p class="muted" style="font-size:13px">No hay sucursales creadas.</p>';
+    return;
+  }
+  container.innerHTML = BRANCHES.map(b => `
+    <label class="branch-check-item">
+      <input type="checkbox" name="userBranch" value="${b.id}"
+        ${selectedIds.map(String).includes(String(b.id)) ? 'checked' : ''} />
+      ${escapeHtml(b.name)}
+    </label>`).join('');
+}
+
+async function handleUserSubmit(evt) {
+  evt.preventDefault();
+  const id = el('userId').value;
+  const password = el('userPassword').value;
+  const checkedBranches = [...document.querySelectorAll('input[name="userBranch"]:checked')]
+    .map(cb => cb.value);
+
+  const payload = {
+    full_name: el('userFullName').value.trim(),
+    email: el('userEmail').value.trim(),
+    phone: el('userPhone').value.trim() || null,
+    role_id: el('userRole').value,
+    branch_ids: checkedBranches,
+  };
+  if (!id) {
+    payload.password = password;
+  } else if (password) {
+    payload.password = password;
+  }
+
+  showMessage('userFormStatus', 'Guardando...');
+  try {
+    if (id) {
+      await window.REDLINE.request(`/users/${id}`, { method: 'PATCH', json: payload });
+      if (checkedBranches !== undefined) {
+        await window.REDLINE.request(`/users/${id}/branches`, {
+          method: 'PUT', json: { branch_ids: checkedBranches },
+        });
+      }
+    } else {
+      await window.REDLINE.request('/users', { method: 'POST', json: payload });
+    }
+    showMessage('userFormStatus', id ? 'Usuario actualizado.' : 'Usuario creado.');
+    resetUserForm();
+    await loadUsers();
+  } catch (err) {
+    showMessage('userFormStatus', err.message, true);
+  }
+}
+
+// ── Roles ────────────────────────────────────────────────────────────────────
+
+async function loadRoles() {
+  try {
+    ROLES = await window.REDLINE.request('/roles');
+    renderRoles();
+    populateSelect('userRole', ROLES, 'Selecciona un rol', el('userRole')?.value,
+      (r) => ({ value: r.id, label: r.name }));
+  } catch (_) {
+    ROLES = [];
+  }
+}
+
+function renderRoles() {
+  const container = el('roleList');
+  if (!container) return;
+  if (!ROLES.length) {
+    container.innerHTML = '<p class="muted" style="padding:12px">No hay roles disponibles.</p>';
+    return;
+  }
+  container.innerHTML = ROLES.map(role => `
+    <div class="role-card">
+      <h4>${escapeHtml(role.name)}</h4>
+      ${role.description ? `<p class="role-desc">${escapeHtml(role.description)}</p>` : ''}
+      <div class="permissions-list">
+        ${(role.permission_codes || []).length
+          ? role.permission_codes.map(p => `<span class="perm-tag">${escapeHtml(p)}</span>`).join('')
+          : '<span class="muted" style="font-size:13px">Sin permisos asignados</span>'}
+      </div>
+    </div>`).join('');
 }
 
 async function loadBranches() {
@@ -463,7 +655,7 @@ function fillVehicleForm(vehicle) {
   el('vehicleFuelType').value = vehicle.fuel_type || '';
   el('vehicleType').value = vehicle.vehicle_type || '';
   el('vehicleDescription').value = vehicle.description || '';
-  window.scrollTo({ top: el('sectionVehicles').offsetTop - 20, behavior: 'smooth' });
+  navigateTo('inventory');
   showMessage('vehicleFormStatus', `Editando ${vehicle.brand} ${vehicle.model}`);
 }
 
@@ -524,7 +716,7 @@ function fillClientForm(client) {
   el('prefPriceMin').value = client.preference?.price_min ?? '';
   el('prefPriceMax').value = client.preference?.price_max ?? '';
   el('prefNotes').value = client.preference?.notes || '';
-  window.scrollTo({ top: el('sectionClients').offsetTop - 20, behavior: 'smooth' });
+  navigateTo('clients');
   showMessage('clientFormStatus', `Editando cliente ${client.full_name}`);
 }
 
@@ -704,7 +896,7 @@ function fillSaleForm(sale) {
   el('saleCost').value = sale.cost ?? '';
   el('salePaymentMethod').value = sale.payment_method || '';
   el('saleNotes').value = sale.notes || '';
-  window.scrollTo({ top: el('sectionSales').offsetTop - 20, behavior: 'smooth' });
+  navigateTo('sales');
   showMessage('saleFormStatus', `Editando venta ${sale.id}`);
 }
 
@@ -788,7 +980,7 @@ function fillBranchForm(branch) {
   setText('branchFormTitle', 'Editar sucursal');
   el('branchSubmitBtn').textContent = 'Guardar cambios';
   el('branchFormStatus').textContent = '';
-  window.scrollTo({ top: el('sectionBranches').offsetTop - 20, behavior: 'smooth' });
+  navigateTo('branches');
 }
 
 function resetBranchForm() {
@@ -1059,6 +1251,25 @@ async function handleMainClick(evt) {
       await Promise.all([loadVehicles(), loadSales()]);
       return;
     }
+    if (action === 'edit-user') {
+      const user = USERS.find(item => item.id === id);
+      if (user) fillUserForm(user);
+      return;
+    }
+    if (action === 'toggle-user') {
+      const user = USERS.find(item => item.id === id);
+      if (!user) return;
+      const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      await window.REDLINE.request(`/users/${id}/status`, { method: 'PATCH', json: { status: newStatus } });
+      await loadUsers();
+      return;
+    }
+    if (action === 'delete-user') {
+      if (!await askConfirmation('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
+      await window.REDLINE.request(`/users/${id}`, { method: 'DELETE' });
+      await loadUsers();
+      return;
+    }
   } catch (error) {
     toast(error.message, 'error');
   }
@@ -1202,6 +1413,19 @@ function wireUi() {
     window.location.href = '../login/index.html';
   });
 
+  // ── Sidebar navigation ──────────────────────────────────────────────────────
+  document.getElementById('sidebarNav').addEventListener('click', (evt) => {
+    const btn = evt.target.closest('[data-page]');
+    if (btn) navigateTo(btn.dataset.page);
+  });
+
+  // Dashboard shortcut buttons
+  document.addEventListener('click', (evt) => {
+    const btn = evt.target.closest('[data-goto]');
+    if (btn) navigateTo(btn.dataset.goto);
+  });
+
+  // ── Forms ───────────────────────────────────────────────────────────────────
   el('branchForm').addEventListener('submit', handleBranchSubmit);
   el('vehicleForm').addEventListener('submit', handleVehicleSubmit);
   el('clientForm').addEventListener('submit', handleClientSubmit);
@@ -1209,12 +1433,25 @@ function wireUi() {
   el('settingsForm').addEventListener('submit', handleSettingsSubmit);
   el('imageUploadForm').addEventListener('submit', handleImageSubmit);
   el('imageUrlForm').addEventListener('submit', handleImageUrlSubmit);
+  el('userForm').addEventListener('submit', handleUserSubmit);
 
+  // ── Reset buttons ────────────────────────────────────────────────────────────
   el('resetVehicleBtn').addEventListener('click', resetVehicleForm);
   el('resetClientBtn').addEventListener('click', resetClientForm);
   el('resetSaleBtn').addEventListener('click', resetSaleForm);
   el('resetBranchBtn').addEventListener('click', resetBranchForm);
+  el('resetUserBtn').addEventListener('click', resetUserForm);
 
+  // ── Refresh buttons ──────────────────────────────────────────────────────────
+  el('refreshVehiclesBtn').addEventListener('click', loadVehicles);
+  el('refreshClientsBtn').addEventListener('click', loadClients);
+  el('refreshSalesBtn').addEventListener('click', loadSales);
+  el('refreshReservedBtn').addEventListener('click', loadVehicles);
+  el('refreshSalesHistoryBtn').addEventListener('click', loadSales);
+  el('refreshUsersBtn').addEventListener('click', loadUsers);
+  el('refreshRolesBtn').addEventListener('click', loadRoles);
+
+  // ── Filters & search ─────────────────────────────────────────────────────────
   el('vehicleSearch').addEventListener('input', renderVehicles);
   el('vehicleStatusFilter').addEventListener('change', renderVehicles);
   el('vehicleBranchFilter').addEventListener('change', renderVehicles);
@@ -1222,8 +1459,6 @@ function wireUi() {
   el('salesHistoryBranchFilter').addEventListener('change', renderSalesHistory);
   el('salesHistoryStatusFilter').addEventListener('change', renderSalesHistory);
   el('salesHistorySearch').addEventListener('input', renderSalesHistory);
-  el('refreshReservedBtn').addEventListener('click', loadVehicles);
-  el('refreshSalesHistoryBtn').addEventListener('click', loadSales);
 
   el('saleBranch').addEventListener('change', syncSharedSelects);
 
@@ -1242,14 +1477,12 @@ function wireUi() {
     }
   });
 
-  el('refreshVehiclesBtn').addEventListener('click', loadVehicles);
-  el('refreshClientsBtn').addEventListener('click', loadClients);
-  el('refreshSalesBtn').addEventListener('click', loadSales);
-
+  // ── Delegated click/change ────────────────────────────────────────────────────
   document.body.addEventListener('click', handleMainClick);
   document.body.addEventListener('change', handleMainChange);
   el('imagesList').addEventListener('click', handleImageActions);
 
+  // ── Modals ───────────────────────────────────────────────────────────────────
   function closeImagesModal() {
     el('imagesModal').classList.add('hidden');
     document.body.style.overflow = '';
@@ -1312,7 +1545,8 @@ async function bootstrap() {
   const overlay = el('appLoadingOverlay');
   try {
     await loadCurrentUser();
-    await Promise.all([loadCatalogs(), loadUsers(), loadBranches()]);
+    await Promise.all([loadCatalogs(), loadRoles()]);
+    await Promise.all([loadUsers(), loadBranches()]);
     await Promise.all([loadVehicles(), loadClients()]);
     await loadSales();
     await loadSettings();
@@ -1320,6 +1554,8 @@ async function bootstrap() {
     resetVehicleForm();
     resetClientForm();
     resetSaleForm();
+    resetUserForm();
+    navigateTo('dashboard');
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
       window.REDLINE.clearToken();
