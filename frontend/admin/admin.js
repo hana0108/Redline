@@ -508,6 +508,9 @@ async function loadBranches() {
     : '<div class="muted">No hay sucursales registradas todavía.</div>';
 
   syncSharedSelects();
+  // Keep checklist in sync: preserve currently checked values
+  const checked = [...document.querySelectorAll('input[name="userBranch"]:checked')].map(cb => cb.value);
+  renderBranchesChecklist(checked);
 }
 
 function vehicleCard(vehicle) {
