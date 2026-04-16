@@ -13,6 +13,11 @@ let ACTIVE_IMAGES_VEHICLE_ID = null;
 let _confirmResolve = null;
 let _reserveStatusResolve = null;  // for reserve-client modal
 
+// Raw API data (unscoped). Branch-scoped views are computed into VEHICLES / CLIENTS / SALES.
+let _RAW_VEHICLES = [];
+let _RAW_CLIENTS  = [];
+let _RAW_SALES    = [];
+
 // ── Page navigation ──────────────────────────────────────────────────────────
 
 const PAGE_MAP = {
@@ -310,6 +315,44 @@ function hasPermission(code) {
   return Array.isArray(CURRENT_USER?.permissions) && CURRENT_USER.permissions.includes(code);
 }
 
+function isAdminUser() {
+  return (CURRENT_USER?.role ?? '').toLowerCase() === 'admin';
+}
+
+function syncBranchRequiredHint() {
+  const selected = ROLES.find(r => r.id === el('userRole')?.value);
+  const required = selected != null && selected.name.toLowerCase() !== 'admin';
+  const hint = el('branchRequiredHint');
+  if (hint) hint.classList.toggle('hidden', !required);
+}
+
+// Filters VEHICLES, CLIENTS and SALES from their raw arrays according to the
+// current user's branch assignments. Must be called after any raw array changes.
+function applyBranchScope() {
+  if (isAdminUser()) {
+    VEHICLES = _RAW_VEHICLES.slice();
+    CLIENTS  = _RAW_CLIENTS.slice();
+    SALES    = _RAW_SALES.slice();
+    return;
+  }
+  const allowed = new Set((CURRENT_USER?.branch_ids ?? []).map(String));
+  if (!allowed.size) {
+    VEHICLES = [];
+    CLIENTS  = [];
+    SALES    = [];
+    return;
+  }
+  VEHICLES = _RAW_VEHICLES.filter(v => allowed.has(String(v.branch_id)));
+  SALES    = _RAW_SALES.filter(s => allowed.has(String(s.branch_id)));
+  // A client is visible when they have at least one sale in an allowed branch,
+  // or when they have no sales at all (newly created, not yet assigned to any branch).
+  const clientsInAllowedBranch = new Set(SALES.map(s => String(s.client_id)));
+  const clientsWithAnySale = new Set(_RAW_SALES.map(s => String(s.client_id)));
+  CLIENTS = _RAW_CLIENTS.filter(c =>
+    clientsInAllowedBranch.has(String(c.id)) || !clientsWithAnySale.has(String(c.id))
+  );
+}
+
 function applyNavPermissions() {
   document.querySelectorAll('.nav-item[data-requires]').forEach(btn => {
     btn.classList.toggle('hidden', !hasPermission(btn.dataset.requires));
@@ -392,6 +435,7 @@ function fillUserForm(user) {
   el('userPassword').required = false;
   el('userPassword').placeholder = 'Contraseña (dejar vacío para no cambiar)';
   el('userRole').value = user.role?.id || '';
+  syncBranchRequiredHint();
   setText('userFormTitle', 'Editar usuario');
   setText('userSubmitBtn', 'Guardar cambios');
   renderBranchesChecklist(user.branch_ids || []);
@@ -411,6 +455,7 @@ function resetUserForm() {
   setText('userSubmitBtn', 'Crear usuario');
   showMessage('userFormStatus', '');
   renderBranchesChecklist([]);
+  syncBranchRequiredHint();
 }
 
 function renderBranchesChecklist(selectedIds = []) {
@@ -434,6 +479,12 @@ async function handleUserSubmit(evt) {
   const password = el('userPassword').value;
   const checkedBranches = [...document.querySelectorAll('input[name="userBranch"]:checked')]
     .map(cb => cb.value);
+
+  const selectedRole = ROLES.find(r => r.id === el('userRole').value);
+  if (selectedRole && selectedRole.name.toLowerCase() !== 'admin' && checkedBranches.length === 0) {
+    showMessage('userFormStatus', 'Este rol requiere al menos una sucursal asignada.', true);
+    return;
+  }
 
   const payload = {
     full_name: el('userFullName').value.trim(),
@@ -655,11 +706,12 @@ function renderSalesHistory() {
 
 async function loadVehicles() {
   try {
-    VEHICLES = await window.REDLINE.request('/vehicles');
+    _RAW_VEHICLES = await window.REDLINE.request('/vehicles');
   } catch (error) {
     if (error.status !== 403) throw error;
-    VEHICLES = [];
+    _RAW_VEHICLES = [];
   }
+  applyBranchScope();
   renderVehicles();
   renderReserved();
   syncSharedSelects();
@@ -795,11 +847,12 @@ async function loadClients() {
   const search = el('clientSearch')?.value.trim();
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
   try {
-    CLIENTS = await window.REDLINE.request(`/clients${query}`);
+    _RAW_CLIENTS = await window.REDLINE.request(`/clients${query}`);
   } catch (error) {
     if (error.status !== 403) throw error;
-    CLIENTS = [];
+    _RAW_CLIENTS = [];
   }
+  applyBranchScope();
   renderClients();
   syncSharedSelects();
 }
@@ -913,12 +966,16 @@ function renderSales() {
 
 async function loadSales() {
   try {
-    SALES = await window.REDLINE.request('/sales');
+    _RAW_SALES = await window.REDLINE.request('/sales');
   } catch (error) {
     if (error.status !== 403) throw error;
-    SALES = [];
+    _RAW_SALES = [];
   }
+  applyBranchScope();
   renderSales();
+  // Re-render clients: their visibility depends on which sales exist in the user's branches.
+  renderClients();
+  syncSharedSelects();
 }
 
 function resetSaleForm() {
@@ -1484,6 +1541,7 @@ function wireUi() {
   el('imageUploadForm').addEventListener('submit', handleImageSubmit);
   el('imageUrlForm').addEventListener('submit', handleImageUrlSubmit);
   el('userForm').addEventListener('submit', handleUserSubmit);
+  el('userRole').addEventListener('change', syncBranchRequiredHint);
 
   // ── Reset buttons ────────────────────────────────────────────────────────────
   el('resetVehicleBtn').addEventListener('click', resetVehicleForm);
