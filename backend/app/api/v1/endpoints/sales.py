@@ -17,10 +17,15 @@ from app.models.client import Client
 from app.models.enums import AuditAction, SaleStatus, VehicleStatus
 from app.models.sale import Sale
 from app.models.user import User
-from app.models.vehicle import Vehicle
+from app.models.vehicle import Vehicle, VehicleStatusHistory
 from app.schemas.sale import SaleCreate, SaleResponse, SaleUpdate
 from app.services.audit import add_audit_log
-from app.services.commercial_service import ensure_vehicle_sellable, get_sale_or_404, validate_commercial_refs
+from app.services.cache_service import cache_service
+from app.services.commercial_service import (
+    ensure_vehicle_sellable,
+    get_sale_or_404,
+    validate_commercial_refs,
+)
 from app.services.pdf_generator import build_sale_pdf
 from app.services.response_service import stream_pdf
 from app.services.settings_service import get_company_info
@@ -47,7 +52,7 @@ def list_sales(
 
 
 @router.post("", response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
-def create_sale(
+async def create_sale(
     payload: SaleCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("sales.write"))],
@@ -75,8 +80,19 @@ def create_sale(
         notes=payload.notes,
     )
     db.add(sale)
+    old_vehicle_status = refs.vehicle.status
     refs.vehicle.status = VehicleStatus.VENDIDO
     db.flush()
+    db.add(
+        VehicleStatusHistory(
+            vehicle_id=refs.vehicle.id,
+            old_status=old_vehicle_status,
+            new_status=VehicleStatus.VENDIDO,
+            changed_by=current_user.id,
+            client_id=payload.client_id,
+            notes="Venta registrada",
+        )
+    )
 
     add_audit_log(
         db,
@@ -102,11 +118,17 @@ def create_sale(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.refresh(sale)
+
+    # Invalidate related caches after successful creation
+    await cache_service.invalidate_sale_related_caches()
+    await cache_service.invalidate_vehicle_related_caches(str(payload.vehicle_id))
+    await cache_service.invalidate_client_related_caches(str(payload.client_id))
+
     return sale
 
 
 @router.patch("/{sale_id}", response_model=SaleResponse)
-def update_sale(
+async def update_sale(
     sale_id: UUID,
     payload: SaleUpdate,
     db: Annotated[Session, Depends(get_db)],
@@ -125,7 +147,7 @@ def update_sale(
         if not branch:
             raise HTTPException(status_code=404, detail="Sucursal no encontrada")
 
-    if "seller_user_id" in update_data and update_data["seller_user_id"]:
+    if "seller_user_id" in update_data and update_data["seller_user_id"] is not None:
         seller = db.get(User, update_data["seller_user_id"])
         if not seller:
             raise HTTPException(status_code=404, detail="Vendedor no encontrado")
@@ -164,11 +186,17 @@ def update_sale(
         raise HTTPException(status_code=409, detail="No fue posible actualizar la venta") from exc
 
     db.refresh(sale)
+
+    # Invalidate related caches after successful update
+    await cache_service.invalidate_sale_related_caches()
+    await cache_service.invalidate_vehicle_related_caches(str(sale.vehicle_id))
+    await cache_service.invalidate_client_related_caches(str(sale.client_id))
+
     return sale
 
 
 @router.delete("/{sale_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_sale(
+async def delete_sale(
     sale_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("sales.write"))],
@@ -184,6 +212,16 @@ def delete_sale(
 
     if vehicle:
         vehicle.status = VehicleStatus.DISPONIBLE
+        db.add(
+            VehicleStatusHistory(
+                vehicle_id=vehicle.id,
+                old_status=VehicleStatus.VENDIDO,
+                new_status=VehicleStatus.DISPONIBLE,
+                changed_by=current_user.id,
+                client_id=sale.client_id,
+                notes="Venta eliminada",
+            )
+        )
 
     db.delete(sale)
     add_audit_log(
@@ -195,6 +233,11 @@ def delete_sale(
         old_data=old_data,
     )
     db.commit()
+
+    # Invalidate related caches after successful deletion
+    await cache_service.invalidate_sale_related_caches()
+    await cache_service.invalidate_vehicle_related_caches(str(sale.vehicle_id))
+    await cache_service.invalidate_client_related_caches(str(sale.client_id))
 
 
 @router.get("/{sale_id}", response_model=SaleResponse)
@@ -217,7 +260,11 @@ def get_sale_pdf(
     vehicle = db.scalar(select(Vehicle).where(Vehicle.id == sale.vehicle_id))
     client = db.scalar(select(Client).where(Client.id == sale.client_id))
     branch = db.scalar(select(Branch).where(Branch.id == sale.branch_id))
-    seller = db.scalar(select(User).where(User.id == sale.seller_user_id)) if sale.seller_user_id else None
+    seller = (
+        db.scalar(select(User).where(User.id == sale.seller_user_id))
+        if sale.seller_user_id
+        else None
+    )
     if not vehicle or not client or not branch:
         raise conflict("La venta tiene referencias incompletas")
 

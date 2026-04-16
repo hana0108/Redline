@@ -4,6 +4,22 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
+class ClientImageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    file_path: str
+    sort_order: int
+    is_cover: bool
+    created_at: datetime
+
+
+class ClientImageCreate(BaseModel):
+    file_path: str = Field(min_length=1)
+    sort_order: int = Field(default=0, ge=0)
+    is_cover: bool = False
+
+
 class ClientPreferenceBase(BaseModel):
     preferred_brands: list[str] | None = None
     price_min: float | None = Field(default=None, ge=0)
@@ -56,6 +72,7 @@ class ClientResponse(ClientBase):
     created_at: datetime
     updated_at: datetime
     preference: ClientPreferenceResponse | None = None
+    images: list[ClientImageResponse] = []
 
 
 class HistorySale(BaseModel):
@@ -67,6 +84,16 @@ class HistorySale(BaseModel):
     status: str
 
 
+class HistoryStatusEvent(BaseModel):
+    id: UUID
+    vehicle_id: UUID
+    old_status: str | None
+    new_status: str
+    notes: str | None
+    created_at: datetime
+
+
 class ClientHistoryResponse(BaseModel):
     client_id: UUID
     sales: list[HistorySale]
+    status_events: list[HistoryStatusEvent] = []

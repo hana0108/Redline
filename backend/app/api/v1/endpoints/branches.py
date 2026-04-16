@@ -3,18 +3,20 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, status, HTTPException
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_permissions
 from app.core.exceptions import not_found
 from app.db.session import get_db
 from app.models.branch import Branch
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, StatusGeneric
 from app.models.user import User
 from app.schemas.branch import BranchCreate, BranchResponse, BranchUpdate
 from app.services.audit import add_audit_log
+from app.models.vehicle import Vehicle
+from app.models.sale import Sale
 
 router = APIRouter(prefix="/branches", tags=["branches"])
 
@@ -25,6 +27,27 @@ def list_branches(
     _: Annotated[User, Depends(require_permissions("branches.read"))],
 ) -> list[Branch]:
     return list(db.scalars(select(Branch).order_by(Branch.name.asc())).all())
+
+
+@router.get("/public")
+def list_public_branches(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[dict]:
+    branches = list(
+        db.scalars(
+            select(Branch).where(Branch.status == StatusGeneric.ACTIVE).order_by(Branch.name.asc())
+        ).all()
+    )
+    return [
+        {
+            "id": str(item.id),
+            "name": item.name,
+            "address": item.address,
+            "phone": item.phone,
+            "email": item.email,
+        }
+        for item in branches
+    ]
 
 
 @router.post("", response_model=BranchResponse, status_code=status.HTTP_201_CREATED)
@@ -48,7 +71,9 @@ def create_branch(
             "address": branch.address,
             "phone": branch.phone,
             "email": branch.email,
-            "status": branch.status.value if hasattr(branch.status, "value") else str(branch.status),
+            "status": branch.status.value
+            if hasattr(branch.status, "value")
+            else str(branch.status),
         },
     )
 
@@ -105,3 +130,42 @@ def update_branch(
     db.commit()
     db.refresh(branch)
     return branch
+
+
+@router.delete("/{branch_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_branch(
+    branch_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_permissions("branches.write"))],
+) -> None:
+    branch = db.get(Branch, branch_id)
+    if not branch:
+        raise not_found("Sucursal no encontrada")
+
+    # Validar que no haya vehículos vinculados
+    vehicle_count = db.scalar(select(func.count(Vehicle.id)).where(Vehicle.branch_id == branch_id))
+    if vehicle_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"No se puede eliminar la sucursal: tiene {vehicle_count} vehículo(s) asociado(s)",
+        )
+
+    # Validar que no haya ventas vinculadas
+    sale_count = db.scalar(select(func.count(Sale.id)).where(Sale.branch_id == branch_id))
+    if sale_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"No se puede eliminar la sucursal: tiene {sale_count} venta(s) asociada(s)",
+        )
+
+    add_audit_log(
+        db,
+        action=AuditAction.DELETE,
+        entity_type="branches",
+        entity_id=branch_id,
+        user_id=current_user.id,
+        old_data={"name": branch.name, "address": branch.address},
+    )
+
+    db.delete(branch)
+    db.commit()

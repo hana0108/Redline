@@ -29,8 +29,30 @@ def authenticate_user(*, email: str, password: str, request: Request, db: Sessio
         .where(User.email == email)
     )
     if not user or not verify_password(password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas")
+        add_audit_log(
+            db,
+            user_id=user.id if user else None,
+            action=AuditAction.LOGIN_FAILED,
+            entity_type="users",
+            entity_id=user.id if user else None,
+            new_data={"email": email, "reason": "invalid_credentials"},
+            ip_address=request.client.host if request.client else None,
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas"
+        )
     if user.status != StatusGeneric.ACTIVE:
+        add_audit_log(
+            db,
+            user_id=user.id,
+            action=AuditAction.LOGIN_FAILED,
+            entity_type="users",
+            entity_id=user.id,
+            new_data={"email": email, "reason": "inactive_user"},
+            ip_address=request.client.host if request.client else None,
+        )
+        db.commit()
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario inactivo")
 
     user.last_login_at = datetime.now(timezone.utc)
@@ -64,7 +86,9 @@ def login_oauth2(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_db)],
 ) -> TokenResponse:
-    return authenticate_user(email=form_data.username, password=form_data.password, request=request, db=db)
+    return authenticate_user(
+        email=form_data.username, password=form_data.password, request=request, db=db
+    )
 
 
 @router.get("/me", response_model=UserSummary)

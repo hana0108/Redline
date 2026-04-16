@@ -3,27 +3,33 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import or_, select, func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import require_permissions
 from app.core.config import settings
 from app.db.session import get_db
-from app.models.enums import AuditAction
+from app.models.client import Client
+from app.models.enums import AuditAction, VehicleStatus
+from app.models.branch import Branch
 from app.models.sale import Sale
 from app.models.user import User
 from app.models.vehicle import Vehicle, VehicleImage, VehicleStatusHistory
 from app.schemas.vehicle import (
+    PublicPurchaseIntentPayload,
+    PublicReservePayload,
     VehicleCreate,
     VehicleImageCreate,
     VehicleImageResponse,
     VehicleImageSortUpdate,
     VehicleResponse,
+    VehicleStatusHistoryEntry,
     VehicleStatusUpdate,
     VehicleUpdate,
 )
 from app.services.audit import add_audit_log
+from app.services.cache_service import cache_service
 from app.services.vehicle_service import (
     ensure_branch_exists,
     get_vehicle_image_or_404,
@@ -35,6 +41,36 @@ from app.services.vehicle_service import (
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
 
+def _public_vehicle_payload(vehicle: Vehicle, branch_name: str) -> dict:
+    cover = next((img for img in vehicle.images if img.is_cover), None)
+    fallback = vehicle.images[0] if vehicle.images else None
+    image_url = (cover or fallback).file_path if (cover or fallback) else None
+
+    return {
+        "id": str(vehicle.id),
+        "branch_id": str(vehicle.branch_id),
+        "branch_name": branch_name,
+        "brand": vehicle.brand,
+        "model": vehicle.model,
+        "vehicle_year": vehicle.vehicle_year,
+        "price": float(vehicle.price),
+        "mileage": vehicle.mileage,
+        "vin": vehicle.vin,
+        "plate": vehicle.plate,
+        "color": vehicle.color,
+        "transmission": vehicle.transmission,
+        "fuel_type": vehicle.fuel_type,
+        "vehicle_type": vehicle.vehicle_type,
+        "description": vehicle.description,
+        "status": vehicle.status.value,
+        "reserved_client_id": str(vehicle.reserved_client_id)
+        if vehicle.reserved_client_id
+        else None,
+        "image_url": image_url,
+        "created_at": vehicle.created_at.isoformat() if vehicle.created_at else None,
+    }
+
+
 @router.get("", response_model=list[VehicleResponse])
 def list_vehicles(
     db: Annotated[Session, Depends(get_db)],
@@ -43,7 +79,7 @@ def list_vehicles(
     branch_id: UUID | None = None,
     search: str | None = None,
 ) -> list[Vehicle]:
-    query = select(Vehicle)
+    query = select(Vehicle).options(selectinload(Vehicle.images))
     if status_filter:
         query = query.where(Vehicle.status == status_filter)
     if branch_id:
@@ -60,8 +96,161 @@ def list_vehicles(
     return list(db.scalars(query).all())
 
 
+@router.get("/public")
+def list_public_vehicles(
+    db: Annotated[Session, Depends(get_db)],
+    branch_id: UUID | None = None,
+    search: str | None = None,
+    status_filter: str | None = Query(default="disponible", alias="status"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> list[dict]:
+    query = select(Vehicle).options(selectinload(Vehicle.images))
+
+    if status_filter:
+        query = query.where(Vehicle.status == status_filter)
+    if branch_id:
+        query = query.where(Vehicle.branch_id == branch_id)
+    if search:
+        like = f"%{search}%"
+        query = query.where(
+            Vehicle.brand.ilike(like)
+            | Vehicle.model.ilike(like)
+            | Vehicle.vin.ilike(like)
+            | Vehicle.plate.ilike(like)
+        )
+
+    query = query.order_by(Vehicle.created_at.desc()).limit(limit).offset(offset)
+    vehicles = list(db.scalars(query).all())
+
+    branch_ids = {item.branch_id for item in vehicles}
+    branch_map: dict = {}
+    if branch_ids:
+        active_branch_ids: set = set()
+        for item in db.scalars(select(Branch).where(Branch.id.in_(branch_ids))).all():
+            branch_map[item.id] = item.name
+            if item.status == "active":
+                active_branch_ids.add(item.id)
+    else:
+        active_branch_ids = set()
+
+    # Only return vehicles whose branch is active
+    vehicles = [v for v in vehicles if v.branch_id in active_branch_ids]
+
+    return [
+        _public_vehicle_payload(item, branch_map.get(item.branch_id, "Sin sucursal"))
+        for item in vehicles
+    ]
+
+
+@router.get("/public/{vehicle_id}")
+def get_public_vehicle(
+    vehicle_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    vehicle = db.scalar(
+        select(Vehicle).options(selectinload(Vehicle.images)).where(Vehicle.id == vehicle_id)
+    )
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehiculo no encontrado")
+
+    branch = db.get(Branch, vehicle.branch_id)
+    return _public_vehicle_payload(vehicle, branch.name if branch else "Sin sucursal")
+
+
+@router.post("/public/{vehicle_id}/reserve", status_code=status.HTTP_200_OK)
+def reserve_vehicle_public(
+    vehicle_id: UUID,
+    payload: PublicReservePayload,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.id == vehicle_id))
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+    if vehicle.status != VehicleStatus.DISPONIBLE:
+        raise HTTPException(
+            status_code=409,
+            detail="Este vehículo ya no está disponible para reserva",
+        )
+
+    client_data = payload.client.model_dump()
+    dedup_filters = []
+    if payload.client.phone:
+        dedup_filters.append(Client.phone == payload.client.phone)
+    if payload.client.email:
+        dedup_filters.append(Client.email == payload.client.email)
+    existing_client = (
+        db.scalar(select(Client).where(or_(*dedup_filters))) if dedup_filters else None
+    )
+    client = existing_client or Client(**client_data)
+    if not existing_client:
+        db.add(client)
+        db.flush()  # get client.id before commit
+
+    vehicle.status = VehicleStatus.RESERVADO
+    vehicle.reserved_client_id = client.id
+    db.add(
+        VehicleStatusHistory(
+            vehicle_id=vehicle.id,
+            old_status=VehicleStatus.DISPONIBLE,
+            new_status=VehicleStatus.RESERVADO,
+            changed_by=None,
+            client_id=client.id,
+            notes="Reservado desde portal público",
+        )
+    )
+    db.commit()
+    return {"message": "Vehículo reservado exitosamente", "client_id": str(client.id)}
+
+
+@router.post("/public/{vehicle_id}/purchase_intent", status_code=status.HTTP_200_OK)
+def purchase_intent_public(
+    vehicle_id: UUID,
+    payload: PublicPurchaseIntentPayload,
+    db: Annotated[Session, Depends(get_db)],
+) -> dict:
+    vehicle = db.scalar(select(Vehicle).where(Vehicle.id == vehicle_id))
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+    if vehicle.status not in (VehicleStatus.DISPONIBLE, VehicleStatus.RESERVADO):
+        raise HTTPException(
+            status_code=409,
+            detail="Este vehículo no está disponible para proceder con la compra",
+        )
+
+    client_data = payload.client.model_dump()
+    dedup_filters = []
+    if payload.client.phone:
+        dedup_filters.append(Client.phone == payload.client.phone)
+    if payload.client.email:
+        dedup_filters.append(Client.email == payload.client.email)
+    existing_client = (
+        db.scalar(select(Client).where(or_(*dedup_filters))) if dedup_filters else None
+    )
+    client = existing_client or Client(**client_data)
+    if not existing_client:
+        db.add(client)
+        db.flush()
+
+    old_status = vehicle.status
+    vehicle.status = VehicleStatus.EN_PROCESO
+    vehicle.reserved_client_id = client.id
+    db.add(
+        VehicleStatusHistory(
+            vehicle_id=vehicle.id,
+            old_status=old_status,
+            new_status=VehicleStatus.EN_PROCESO,
+            changed_by=None,
+            client_id=client.id,
+            notes="Solicitud de compra desde portal público",
+        )
+    )
+    db.commit()
+    return {"message": "Solicitud registrada exitosamente", "client_id": str(client.id)}
+
+
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
-def create_vehicle(
+async def create_vehicle(
     payload: VehicleCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(require_permissions("vehicles.write"))],
@@ -85,6 +274,10 @@ def create_vehicle(
         new_data={"vin": vehicle.vin, "brand": vehicle.brand, "model": vehicle.model},
     )
     db.commit()
+
+    # Invalidate related caches after successful creation
+    await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
+
     return get_vehicle_or_404(db, vehicle.id)
 
 
@@ -98,7 +291,7 @@ def get_vehicle(
 
 
 @router.patch("/{vehicle_id}", response_model=VehicleResponse)
-def update_vehicle(
+async def update_vehicle(
     vehicle_id: UUID,
     payload: VehicleUpdate,
     db: Annotated[Session, Depends(get_db)],
@@ -135,11 +328,15 @@ def update_vehicle(
         new_data=update_data,
     )
     db.commit()
+
+    # Invalidate related caches after successful update
+    await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
+
     return get_vehicle_or_404(db, vehicle.id)
 
 
 @router.patch("/{vehicle_id}/status", response_model=VehicleResponse)
-def update_vehicle_status(
+async def update_vehicle_status(
     vehicle_id: UUID,
     payload: VehicleStatusUpdate,
     db: Annotated[Session, Depends(get_db)],
@@ -147,14 +344,34 @@ def update_vehicle_status(
 ) -> Vehicle:
     vehicle = get_vehicle_or_404(db, vehicle_id)
 
+    # Validar que si cambia a "disponible" o "en_proceso", tenga al menos una imagen
+    if payload.status in ("disponible", "en_proceso"):
+        image_count = db.scalar(
+            select(func.count(VehicleImage.id)).where(VehicleImage.vehicle_id == vehicle_id)
+        )
+        if not image_count:
+            raise HTTPException(
+                status_code=400,
+                detail="El vehículo debe tener al menos una imagen antes de cambiar a este estado",
+            )
+
     old_status = vehicle.status
     vehicle.status = payload.status
+
+    # Track or clear reserved client
+    if payload.status == VehicleStatus.RESERVADO:
+        if payload.client_id:
+            vehicle.reserved_client_id = payload.client_id
+    else:
+        vehicle.reserved_client_id = None
+
     db.add(
         VehicleStatusHistory(
             vehicle_id=vehicle.id,
             old_status=old_status,
             new_status=payload.status,
             changed_by=current_user.id,
+            client_id=payload.client_id,
             notes=payload.notes,
         )
     )
@@ -169,7 +386,27 @@ def update_vehicle_status(
     )
 
     db.commit()
+
+    # Invalidate related caches after successful status change
+    await cache_service.invalidate_vehicle_related_caches(str(vehicle.id))
+
     return get_vehicle_or_404(db, vehicle.id)
+
+
+@router.get("/{vehicle_id}/status-history", response_model=list[VehicleStatusHistoryEntry])
+def get_vehicle_status_history(
+    vehicle_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("vehicles.read"))],
+) -> list[VehicleStatusHistory]:
+    get_vehicle_or_404(db, vehicle_id)
+    return list(
+        db.scalars(
+            select(VehicleStatusHistory)
+            .where(VehicleStatusHistory.vehicle_id == vehicle_id)
+            .order_by(VehicleStatusHistory.created_at.desc())
+        ).all()
+    )
 
 
 @router.get("/{vehicle_id}/images", response_model=list[VehicleImageResponse])
@@ -188,7 +425,9 @@ def list_vehicle_images(
     )
 
 
-@router.post("/{vehicle_id}/images", response_model=VehicleImageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{vehicle_id}/images", response_model=VehicleImageResponse, status_code=status.HTTP_201_CREATED
+)
 def create_vehicle_image_from_path(
     vehicle_id: UUID,
     payload: VehicleImageCreate,
@@ -217,7 +456,11 @@ def create_vehicle_image_from_path(
     return image
 
 
-@router.post("/{vehicle_id}/images/upload", response_model=VehicleImageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{vehicle_id}/images/upload",
+    response_model=VehicleImageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_vehicle_image(
     vehicle_id: UUID,
     db: Annotated[Session, Depends(get_db)],

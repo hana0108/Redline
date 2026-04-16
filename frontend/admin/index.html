@@ -8,267 +8,549 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <header class="admin-header">
-    <div>
-      <p class="eyebrow">Backoffice</p>
-      <h1>REDLINE <span>CORE</span></h1>
-      <p id="welcomeText" class="muted">Cargando usuario...</p>
-    </div>
-    <div class="header-actions">
-      <div class="api-box">
-        <label for="apiBaseInput">API Base</label>
-        <div class="api-row">
-          <input id="apiBaseInput" placeholder="http://localhost:8000/api/v1" />
-          <button id="saveApiBtn" class="btn secondary">Guardar</button>
-        </div>
-        <small id="apiStatus" class="muted"></small>
-      </div>
-      <button id="logoutBtn" class="btn danger">Cerrar sesión</button>
-    </div>
-  </header>
+  <div class="admin-app">
 
-  <main class="admin-layout">
-    <section class="card metrics metrics-extended">
-      <div><p class="metric-label">Vehículos</p><h2 id="metricVehicles">0</h2></div>
-      <div><p class="metric-label">Sucursales</p><h2 id="metricBranches">0</h2></div>
-      <div><p class="metric-label">Clientes</p><h2 id="metricClients">0</h2></div>
-      <div><p class="metric-label">Ventas</p><h2 id="metricSales">0</h2></div>
-      <div><p class="metric-label">Permisos</p><h2 id="metricPermissions">0</h2></div>
-    </section>
-
-    <section class="card quick-nav">
-      <a href="#sectionBranches">Sucursales</a>
-      <a href="#sectionVehicles">Inventario</a>
-      <a href="#sectionClients">Clientes</a>
-      <a href="#sectionSales">Ventas</a>
-      <a href="#sectionSettings">Configuración</a>
-    </section>
-
-    <section id="sectionBranches" class="grid two-columns-equal">
-      <div class="card">
-        <div class="card-head">
-          <h3>Sucursales</h3>
-          <span class="muted">Crea una sucursal antes de registrar vehículos.</span>
-        </div>
-        <form id="branchForm" class="stack-form compact">
-          <input id="branchName" placeholder="Nombre de sucursal" required />
-          <input id="branchPhone" placeholder="Teléfono" />
-          <input id="branchEmail" type="email" placeholder="Email" />
-          <textarea id="branchAddress" placeholder="Dirección"></textarea>
-          <button class="btn primary" type="submit">Crear sucursal</button>
-          <div id="branchFormStatus" class="status-line"></div>
-        </form>
+    <!-- ── Sidebar ───────────────────────────────────── -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-brand">
+        <p class="sidebar-eyebrow">Backoffice</p>
+        <h1 class="sidebar-title">RED<span>LINE</span></h1>
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <h3>Listado de sucursales</h3>
-          <span class="muted">Sucursales disponibles para operaciones.</span>
-        </div>
-        <div id="branchList" class="list-simple"></div>
-      </div>
-    </section>
+      <nav class="sidebar-nav" id="sidebarNav">
+        <button class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" data-page="branches" data-requires="branches.read">
+          <span class="nav-icon">🏢</span><span class="nav-label">Sucursales</span>
+        </button>
+        <button class="nav-item" data-page="inventory" data-requires="vehicles.read">
+          <span class="nav-icon">🚗</span><span class="nav-label">Inventario</span>
+        </button>
+        <button class="nav-item" data-page="clients" data-requires="clients.read">
+          <span class="nav-icon">👥</span><span class="nav-label">Clientes</span>
+        </button>
+        <button class="nav-item" data-page="sales" data-requires="sales.read">
+          <span class="nav-icon">💰</span><span class="nav-label">Ventas</span>
+        </button>
+        <div class="nav-divider"></div>
+        <button class="nav-item" data-page="users" data-requires="users.read">
+          <span class="nav-icon">🔐</span><span class="nav-label">Usuarios</span>
+        </button>
+        <button class="nav-item" data-page="roles" data-requires="roles.read">
+          <span class="nav-icon">🛡️</span><span class="nav-label">Roles</span>
+        </button>
+        <div class="nav-divider"></div>
+        <button class="nav-item" data-page="settings" data-requires="settings.read">
+          <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
+        </button>
+      </nav>
 
-    <section id="sectionVehicles" class="grid two-columns-wide">
-      <div class="card sticky-card">
-        <div class="card-head">
-          <h3>Vehículo</h3>
-          <span class="muted">Crear o editar inventario</span>
+      <div class="sidebar-footer">
+        <p id="welcomeText" class="sidebar-user">Cargando...</p>
+        <button id="logoutBtn" class="btn danger small">Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- ── Main content ──────────────────────────────── -->
+    <main class="admin-content">
+
+      <!-- ── PAGE: Dashboard ─── -->
+      <div class="page-section" id="pageDashboard">
+        <div class="page-header">
+          <h2 class="page-title">Dashboard</h2>
         </div>
-        <form id="vehicleForm" class="stack-form">
-          <input type="hidden" id="vehicleId" />
-          <div class="grid two">
-            <select id="vehicleBranch" required></select>
-            <input id="vehicleVin" placeholder="VIN / Chasis" required />
-            <input id="vehicleBrand" placeholder="Marca" required />
-            <input id="vehicleModel" placeholder="Modelo" required />
-            <input id="vehicleYear" type="number" min="1900" max="2100" placeholder="Año" required />
-            <input id="vehiclePrice" type="number" min="0" step="0.01" placeholder="Precio" required />
-            <input id="vehicleMileage" type="number" min="0" placeholder="Millaje" />
-            <input id="vehiclePlate" placeholder="Placa" />
-            <input id="vehicleColor" placeholder="Color" />
-            <input id="vehicleTransmission" placeholder="Transmisión" />
-            <input id="vehicleFuelType" placeholder="Combustible" />
-            <input id="vehicleType" placeholder="Tipo de vehículo" />
+        <section class="card metrics metrics-extended">
+          <div><p class="metric-label">Vehículos</p><h2 id="metricVehicles">0</h2></div>
+          <div><p class="metric-label">Sucursales</p><h2 id="metricBranches">0</h2></div>
+          <div><p class="metric-label">Clientes</p><h2 id="metricClients">0</h2></div>
+          <div><p class="metric-label">Ventas</p><h2 id="metricSales">0</h2></div>
+          <div><p class="metric-label">Usuarios</p><h2 id="metricPermissions">0</h2></div>
+        </section>
+        <section class="dashboard-shortcuts card">
+          <p class="subsection-title" style="margin-bottom:14px">Acceso rápido</p>
+          <div class="shortcuts-grid">
+            <button class="shortcut-btn" data-goto="branches">🏢<span>Sucursales</span></button>
+            <button class="shortcut-btn" data-goto="inventory">🚗<span>Inventario</span></button>
+            <button class="shortcut-btn" data-goto="clients">👥<span>Clientes</span></button>
+            <button class="shortcut-btn" data-goto="sales">💰<span>Ventas</span></button>
+            <button class="shortcut-btn" data-goto="users">🔐<span>Usuarios</span></button>
+            <button class="shortcut-btn" data-goto="settings">⚙️<span>Configuración</span></button>
           </div>
-          <textarea id="vehicleDescription" placeholder="Descripción"></textarea>
-          <div class="form-actions">
-            <button class="btn primary" type="submit">Guardar vehículo</button>
-            <button class="btn secondary" type="button" id="resetVehicleBtn">Limpiar</button>
-          </div>
-          <div id="vehicleFormStatus" class="status-line"></div>
-        </form>
+        </section>
       </div>
 
-      <div class="card">
-        <div class="card-head space-between">
-          <div>
-            <h3>Inventario</h3>
-            <span class="muted">Administrar vehículos e imágenes</span>
+      <!-- ── PAGE: Sucursales ─── -->
+      <div class="page-section hidden" id="pageBranches">
+        <div class="page-header">
+          <h2 class="page-title">Sucursales</h2>
+        </div>
+        <section id="sectionBranches" class="grid two-columns-equal">
+          <div class="card sticky-card">
+            <div class="card-head">
+              <h3 id="branchFormTitle">Nueva sucursal</h3>
+              <span class="muted">Registra y gestiona tus puntos de venta.</span>
+            </div>
+            <input type="hidden" id="branchId" />
+            <form id="branchForm" class="stack-form compact">
+              <input id="branchName" placeholder="Nombre de sucursal" required />
+              <input id="branchPhone" placeholder="Teléfono" />
+              <input id="branchEmail" type="email" placeholder="Email" />
+              <textarea id="branchAddress" placeholder="Dirección"></textarea>
+              <div class="form-actions">
+                <button class="btn primary" type="submit" id="branchSubmitBtn">Crear sucursal</button>
+                <button class="btn secondary" type="button" id="resetBranchBtn">Limpiar</button>
+              </div>
+              <div id="branchFormStatus" class="status-line"></div>
+            </form>
           </div>
-          <div class="toolbar">
-            <input id="vehicleSearch" placeholder="Buscar por marca, modelo, VIN o placa" />
-            <select id="vehicleStatusFilter">
-              <option value="">Todos los estados</option>
-              <option value="disponible">Disponible</option>
-              <option value="reservado">Reservado</option>
-              <option value="vendido">Vendido</option>
-              <option value="en_proceso">En proceso</option>
-              <option value="retirado">Retirado</option>
-            </select>
-            <button id="refreshVehiclesBtn" class="btn secondary">Actualizar</button>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Listado de sucursales</h3>
+              <span class="muted">Sucursales disponibles para operaciones.</span>
+            </div>
+            <div id="branchList" class="list-simple scrollable-list"></div>
+          </div>
+        </section>
+      </div><!-- /pageBranches -->
+
+      <!-- ── PAGE: Inventario ─── -->
+      <div class="page-section hidden" id="pageInventory">
+        <div class="page-header">
+          <h2 class="page-title">Inventario</h2>
+        </div>
+
+        <section id="sectionVehicles" class="grid two-columns-wide">
+          <div class="card sticky-card">
+            <div class="card-head">
+              <h3>Vehículo</h3>
+              <span class="muted">Crear o editar inventario</span>
+            </div>
+            <form id="vehicleForm" class="stack-form">
+              <input type="hidden" id="vehicleId" />
+              <div class="grid two">
+                <select id="vehicleBranch" required></select>
+                <input id="vehicleVin" placeholder="VIN / Chasis" required />
+                <select id="vehicleBrand" required><option value="">Marca</option></select>
+                <select id="vehicleModel"><option value="">Modelo</option></select>
+                <input id="vehicleYear" type="number" min="1900" max="2100" placeholder="Año" required />
+                <input id="vehiclePrice" type="number" min="0" step="0.01" placeholder="Precio" required />
+                <input id="vehicleMileage" type="number" min="0" placeholder="Millaje" />
+                <input id="vehiclePlate" placeholder="Placa" />
+                <select id="vehicleColor"><option value="">Color</option></select>
+                <select id="vehicleTransmission"><option value="">Transmisión</option></select>
+                <select id="vehicleFuelType"><option value="">Combustible</option></select>
+                <select id="vehicleType"><option value="">Tipo de vehículo</option></select>
+              </div>
+              <textarea id="vehicleDescription" placeholder="Descripción"></textarea>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Guardar vehículo</button>
+                <button class="btn secondary" type="button" id="resetVehicleBtn">Limpiar</button>
+              </div>
+              <div id="vehicleFormStatus" class="status-line"></div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head space-between">
+              <div>
+                <h3>Inventario</h3>
+                <span class="muted">Administrar vehículos e imágenes</span>
+              </div>
+              <div class="toolbar">
+                <input id="vehicleSearch" placeholder="Buscar por marca, modelo, VIN o placa" />
+                <select id="vehicleBranchFilter">
+                  <option value="">Todas las sucursales</option>
+                </select>
+                <select id="vehicleStatusFilter">
+                  <option value="">Todos los estados</option>
+                  <option value="disponible">Disponible</option>
+                  <option value="vendido">Vendido</option>
+                  <option value="en_proceso">En proceso</option>
+                  <option value="retirado">Retirado</option>
+                </select>
+                <button id="refreshVehiclesBtn" class="btn secondary">Actualizar</button>
+              </div>
+            </div>
+            <div id="vehicleList" class="vehicle-list scrollable-list"></div>
+          </div>
+        </section>
+
+        <!-- Vehículos reservados -->
+        <section id="sectionReserved" class="card" style="margin-top:20px">
+          <div class="card-head space-between">
+            <div>
+              <h3>Vehículos reservados</h3>
+              <span class="muted">Unidades con reserva activa pendientes de cierre</span>
+            </div>
+            <button id="refreshReservedBtn" class="btn secondary">Actualizar</button>
+          </div>
+          <div id="reservedList" class="vehicle-list scrollable-list"></div>
+        </section>
+      </div><!-- /pageInventory -->
+
+      <!-- ── PAGE: Clientes ─── -->
+      <div class="page-section hidden" id="pageClients">
+        <div class="page-header">
+          <h2 class="page-title">Clientes</h2>
+        </div>
+
+        <section id="sectionClients" class="grid two-columns-equal">
+          <div class="card sticky-card">
+            <div class="card-head">
+              <h3>Cliente</h3>
+              <span class="muted">CRM básico del dealer</span>
+            </div>
+            <form id="clientForm" class="stack-form">
+              <input type="hidden" id="clientId" />
+              <input id="clientFullName" placeholder="Nombre completo" required />
+              <div class="grid two">
+                <input id="clientDocumentType" placeholder="Tipo documento" />
+                <input id="clientDocumentNumber" placeholder="Número documento" />
+                <input id="clientEmail" type="email" placeholder="Email" />
+                <input id="clientPhone" placeholder="Teléfono" />
+                <input id="clientAlternatePhone" placeholder="Teléfono alterno" />
+                <input id="clientAddress" placeholder="Dirección" />
+              </div>
+              <textarea id="clientNotes" placeholder="Notas del cliente"></textarea>
+              <div class="subsection-title">Preferencias</div>
+              <div class="grid two">
+                <input id="prefBrands" placeholder="Marcas preferidas (Toyota, Honda)" />
+                <select id="prefVehicleType"><option value="">Tipo de vehículo</option></select>
+                <select id="prefTransmission"><option value="">Transmisión</option></select>
+                <select id="prefFuelType"><option value="">Combustible</option></select>
+                <select id="prefColor"><option value="">Color</option></select>
+                <input id="prefPriceMin" type="number" min="0" step="0.01" placeholder="Precio mínimo" />
+                <input id="prefPriceMax" type="number" min="0" step="0.01" placeholder="Precio máximo" />
+              </div>
+              <textarea id="prefNotes" placeholder="Notas de preferencia"></textarea>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Guardar cliente</button>
+                <button class="btn secondary" type="button" id="resetClientBtn">Limpiar</button>
+              </div>
+              <div id="clientFormStatus" class="status-line"></div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head space-between">
+              <div>
+                <h3>Clientes</h3>
+                <span class="muted">Búsqueda, edición e historial</span>
+              </div>
+              <div class="toolbar">
+                <input id="clientSearch" placeholder="Buscar por nombre, email, teléfono o documento" />
+                <button id="refreshClientsBtn" class="btn secondary">Actualizar</button>
+              </div>
+            </div>
+            <div id="clientList" class="list-grid scrollable-list"></div>
+          </div>
+        </section>
+      </div><!-- /pageClients -->
+
+      <!-- ── PAGE: Ventas ─── -->
+      <div class="page-section hidden" id="pageSales">
+        <div class="page-header">
+          <h2 class="page-title">Ventas</h2>
+        </div>
+
+        <section id="sectionSales" class="grid two-columns-equal">
+          <div class="card sticky-card">
+            <div class="card-head">
+              <h3>Venta</h3>
+              <span class="muted">Registrar o editar ventas</span>
+            </div>
+            <form id="saleForm" class="stack-form">
+              <input type="hidden" id="saleId" />
+              <div class="grid two">
+                <select id="saleBranch" required></select>
+                <select id="saleClient" required></select>
+                <select id="saleVehicle" required></select>
+                <select id="saleSeller"></select>
+                <input id="saleDate" type="datetime-local" />
+                <input id="salePrice" type="number" min="0" step="0.01" placeholder="Precio de venta" required />
+                <input id="saleCost" type="number" min="0" step="0.01" placeholder="Costo" />
+                <input id="salePaymentMethod" placeholder="Método de pago" />
+              </div>
+              <textarea id="saleNotes" placeholder="Notas"></textarea>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Guardar venta</button>
+                <button class="btn secondary" type="button" id="resetSaleBtn">Limpiar</button>
+              </div>
+              <div id="saleFormStatus" class="status-line"></div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head space-between">
+              <div>
+                <h3>Ventas</h3>
+                <span class="muted">Listado y comprobantes</span>
+              </div>
+              <div class="toolbar">
+                <button id="refreshSalesBtn" class="btn secondary">Actualizar</button>
+              </div>
+            </div>
+            <div id="saleList" class="list-grid scrollable-list"></div>
+          </div>
+        </section>
+
+        <!-- Historial de ventas -->
+        <section id="sectionSalesHistory" class="card" style="margin-top:20px">
+          <div class="card-head space-between">
+            <div>
+              <h3>Historial de ventas</h3>
+              <span class="muted">Todas las transacciones registradas</span>
+            </div>
+            <div class="toolbar">
+              <select id="salesHistoryBranchFilter"><option value="">Todas las sucursales</option></select>
+              <select id="salesHistoryStatusFilter">
+                <option value="">Todos los estados</option>
+                <option value="completada">Completada</option>
+                <option value="anulada">Anulada</option>
+              </select>
+              <input id="salesHistorySearch" placeholder="Buscar cliente o vehículo" />
+              <button id="refreshSalesHistoryBtn" class="btn secondary">Actualizar</button>
+            </div>
+          </div>
+          <div id="salesHistoryList" class="list-grid scrollable-list"></div>
+        </section>
+      </div><!-- /pageSales -->
+
+      <!-- ── PAGE: Usuarios ─── -->
+      <div class="page-section hidden" id="pageUsers">
+        <div class="page-header">
+          <h2 class="page-title">Usuarios</h2>
+        </div>
+
+        <div class="grid two-columns-equal">
+          <!-- Form -->
+          <div class="card sticky-card">
+            <div class="card-head">
+              <h3 id="userFormTitle">Nuevo usuario</h3>
+              <span class="muted">Crear o editar accesos al backoffice</span>
+            </div>
+            <input type="hidden" id="userId" />
+            <form id="userForm" class="stack-form compact">
+              <input id="userFullName" placeholder="Nombre completo" required />
+              <input id="userEmail" type="email" placeholder="Email" required />
+              <input id="userPhone" placeholder="Teléfono" />
+              <input id="userPassword" type="password" placeholder="Contraseña (mín. 8 caracteres)" autocomplete="new-password" />
+              <select id="userRole" required><option value="">Selecciona un rol</option></select>
+              <div class="subsection-title">Sucursales asignadas <small id="branchRequiredHint" class="hidden" style="color:#da2520;font-weight:600">— requerida</small></div>
+              <div id="userBranchesChecklist" class="branches-checklist"></div>
+              <div class="form-actions">
+                <button class="btn primary" type="submit" id="userSubmitBtn">Crear usuario</button>
+                <button class="btn secondary" type="button" id="resetUserBtn">Limpiar</button>
+              </div>
+              <div id="userFormStatus" class="status-line"></div>
+            </form>
+          </div>
+
+          <!-- List -->
+          <div class="card">
+            <div class="card-head space-between">
+              <div>
+                <h3>Usuarios del sistema</h3>
+                <span class="muted">Gestiona accesos y permisos</span>
+              </div>
+              <button id="refreshUsersBtn" class="btn secondary">Actualizar</button>
+            </div>
+            <div id="userList" class="list-simple scrollable-list"></div>
           </div>
         </div>
-        <div id="vehicleList" class="vehicle-list"></div>
-      </div>
-    </section>
+      </div><!-- /pageUsers -->
 
-    <section class="card hidden" id="imagesPanel">
-      <div class="card-head space-between">
+      <!-- ── PAGE: Roles ─── -->
+      <div class="page-section hidden" id="pageRoles">
+        <div class="page-header">
+          <h2 class="page-title">Roles y permisos</h2>
+        </div>
+
+        <div class="card">
+          <div class="card-head space-between">
+            <div>
+              <h3>Roles del sistema</h3>
+              <span class="muted">Cada rol agrupa un conjunto de permisos</span>
+            </div>
+            <button id="refreshRolesBtn" class="btn secondary">Actualizar</button>
+          </div>
+          <div id="roleList" class="roles-grid"></div>
+        </div>
+      </div><!-- /pageRoles -->
+
+      <!-- ── PAGE: Configuración ─── -->
+      <div class="page-section hidden" id="pageSettings">
+        <div class="page-header">
+          <h2 class="page-title">Configuración</h2>
+        </div>
+
+        <section id="sectionSettings">
+          <div class="card sticky-card">
+            <div class="card-head">
+              <h3>Configuración general</h3>
+              <span class="muted">Datos del dealer y pie de documentos.</span>
+            </div>
+            <form id="settingsForm" class="stack-form">
+              <input id="settingsBusinessName" placeholder="Nombre del negocio" required />
+              <input id="settingsLogoPath" placeholder="Logo URL o ruta" />
+              <div class="grid two">
+                <input id="settingsContactEmail" type="email" placeholder="Email de contacto" />
+                <input id="settingsContactPhone" placeholder="Teléfono" />
+                <input id="settingsWhatsapp" placeholder="WhatsApp" />
+                <input id="settingsWebsite" placeholder="Sitio web" />
+                <input id="settingsFacebook" placeholder="Facebook" />
+                <input id="settingsInstagram" placeholder="Instagram" />
+              </div>
+              <textarea id="settingsAddress" placeholder="Dirección"></textarea>
+              <textarea id="settingsTerms" placeholder="Términos y condiciones"></textarea>
+              <textarea id="settingsPrivacy" placeholder="Política de privacidad"></textarea>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Guardar configuración</button>
+              </div>
+              <div id="settingsFormStatus" class="status-line"></div>
+            </form>
+          </div>
+        </section>
+      </div><!-- /pageSettings -->
+
+    </main><!-- /admin-content -->
+  </div><!-- /admin-app -->
+
+  <!-- Modal asociar cliente a reserva -->
+  <div id="reserveClientModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reserveClientModalTitle">
+    <div class="admin-modal-panel" style="max-width:520px">
+      <div class="admin-modal-header">
         <div>
-          <h3>Imágenes del vehículo</h3>
+          <h3 id="reserveClientModalTitle">Reservar vehículo</h3>
+          <span class="muted">Asocia un cliente a esta reserva</span>
+        </div>
+        <button id="reserveClientCancelBtn" class="btn secondary small" aria-label="Cerrar">&times;</button>
+      </div>
+      <input type="hidden" id="reserveClientVehicleId" />
+      <input type="hidden" id="reserveClientOriginalStatus" />
+      <input type="hidden" id="reserveClientId" />
+
+      <div style="margin-bottom:12px">
+        <p class="subsection-title" style="margin:0 0 8px">Buscar cliente existente</p>
+        <input id="reserveClientSearch" placeholder="Nombre, teléfono, email o documento" style="width:100%" />
+        <div id="reserveClientList" class="reserve-client-list"></div>
+      </div>
+
+      <div class="admin-modal-divider"></div>
+
+      <p class="subsection-title" style="margin:0 0 8px">O registrar nuevo cliente</p>
+      <div class="grid two">
+        <input id="reserveClientName" placeholder="Nombre completo" />
+        <input id="reserveClientPhone" placeholder="Teléfono" />
+        <input id="reserveClientEmail" type="email" placeholder="Email" />
+      </div>
+
+      <div class="confirm-actions" style="margin-top:16px">
+        <button id="reserveClientCancelBtn2" class="btn secondary">Cancelar</button>
+        <button id="reserveClientConfirmBtn" class="btn primary">Confirmar reserva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal historial de vehículo -->
+  <div id="vehicleHistoryModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="vehicleHistoryTitle">
+    <div class="admin-modal-panel" style="max-width:620px">
+      <div class="admin-modal-header">
+        <div>
+          <h3 id="vehicleHistoryTitle">Historial de estados</h3>
+          <span id="vehicleHistorySubtitle" class="muted"></span>
+        </div>
+        <button id="closeVehicleHistoryBtn" class="btn secondary small" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="vehicleHistoryList" class="history-event-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal historial de cliente -->
+  <div id="clientHistoryModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="clientHistoryTitle">
+    <div class="admin-modal-panel" style="max-width:700px">
+      <div class="admin-modal-header">
+        <div>
+          <h3 id="clientHistoryTitle">Historial de cliente</h3>
+          <span id="clientHistorySubtitle" class="muted"></span>
+        </div>
+        <button id="closeClientHistoryBtn" class="btn secondary small" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="clientHistoryContent"></div>
+    </div>
+  </div>
+
+  <!-- Modal de imágenes -->
+  <div id="imagesModal" class="admin-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="imagesTitleText">
+    <div class="admin-modal-panel">
+
+      <!-- Header -->
+      <div class="admin-modal-header">
+        <div>
+          <h3 id="imagesTitleText">Imágenes del vehículo</h3>
           <span id="imagesTitle" class="muted"></span>
         </div>
-        <button id="closeImagesPanel" class="btn secondary">Cerrar</button>
+        <button id="closeImagesPanel" class="btn secondary small" aria-label="Cerrar">✕</button>
       </div>
-      <form id="imageUploadForm" class="inline-form">
-        <input type="file" id="imageFile" accept="image/*" required />
-        <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
-        <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
-        <button class="btn primary" type="submit">Subir imagen</button>
-      </form>
-      <form id="imageUrlForm" class="inline-form" style="margin-top: 12px;">
-        <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
-        <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
-        <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
-        <button class="btn secondary" type="submit">Usar URL</button>
-      </form>
+
+      <!-- Upload area -->
+      <div class="images-modal-upload">
+        <div class="images-upload-block">
+          <p class="images-upload-label">Subir archivo</p>
+          <form id="imageUploadForm" class="stack-form compact">
+            <input type="file" id="imageFile" accept="image/*" required />
+            <div class="grid two">
+              <input type="number" id="imageSortOrder" min="0" value="0" placeholder="Orden" />
+              <label class="toggle-line"><input id="imageIsCover" type="checkbox" /> Portada</label>
+            </div>
+            <button class="btn primary" type="submit">Subir imagen</button>
+          </form>
+        </div>
+        <div class="images-upload-divider">o</div>
+        <div class="images-upload-block">
+          <p class="images-upload-label">Usar URL externa</p>
+          <form id="imageUrlForm" class="stack-form compact">
+            <input type="url" id="imageUrl" placeholder="https://servidor.com/vehiculo.jpg" />
+            <div class="grid two">
+              <input type="number" id="imageUrlSortOrder" min="0" value="0" placeholder="Orden" />
+              <label class="toggle-line"><input id="imageUrlIsCover" type="checkbox" /> Portada</label>
+            </div>
+            <button class="btn secondary" type="submit">Guardar URL</button>
+          </form>
+        </div>
+      </div>
+
       <div id="imageUploadStatus" class="status-line"></div>
+
+      <!-- Existing images -->
+      <div class="images-modal-gallery-head">
+        <span class="subsection-title">Imágenes cargadas</span>
+      </div>
       <div id="imagesList" class="image-grid"></div>
-    </section>
 
-    <section id="sectionClients" class="grid two-columns-equal">
-      <div class="card sticky-card">
-        <div class="card-head">
-          <h3>Cliente</h3>
-          <span class="muted">CRM básico del dealer</span>
-        </div>
-        <form id="clientForm" class="stack-form">
-          <input type="hidden" id="clientId" />
-          <input id="clientFullName" placeholder="Nombre completo" required />
-          <div class="grid two">
-            <input id="clientDocumentType" placeholder="Tipo documento" />
-            <input id="clientDocumentNumber" placeholder="Número documento" />
-            <input id="clientEmail" type="email" placeholder="Email" />
-            <input id="clientPhone" placeholder="Teléfono" />
-            <input id="clientAlternatePhone" placeholder="Teléfono alterno" />
-            <input id="clientAddress" placeholder="Dirección" />
-          </div>
-          <textarea id="clientNotes" placeholder="Notas del cliente"></textarea>
-          <div class="subsection-title">Preferencias</div>
-          <div class="grid two">
-            <input id="prefBrands" placeholder="Marcas preferidas (Toyota, Honda)" />
-            <input id="prefVehicleType" placeholder="Tipo de vehículo" />
-            <input id="prefTransmission" placeholder="Transmisión" />
-            <input id="prefFuelType" placeholder="Combustible" />
-            <input id="prefColor" placeholder="Color" />
-            <input id="prefPriceMin" type="number" min="0" step="0.01" placeholder="Precio mínimo" />
-            <input id="prefPriceMax" type="number" min="0" step="0.01" placeholder="Precio máximo" />
-          </div>
-          <textarea id="prefNotes" placeholder="Notas de preferencia"></textarea>
-          <div class="form-actions">
-            <button class="btn primary" type="submit">Guardar cliente</button>
-            <button class="btn secondary" type="button" id="resetClientBtn">Limpiar</button>
-          </div>
-          <div id="clientFormStatus" class="status-line"></div>
-        </form>
-      </div>
+    </div>
+  </div>
 
-      <div class="card">
-        <div class="card-head space-between">
-          <div>
-            <h3>Clientes</h3>
-            <span class="muted">Búsqueda, edición e historial</span>
-          </div>
-          <div class="toolbar">
-            <input id="clientSearch" placeholder="Buscar por nombre, email, teléfono o documento" />
-            <button id="refreshClientsBtn" class="btn secondary">Actualizar</button>
-          </div>
-        </div>
-        <div id="clientList" class="list-grid"></div>
-        <div id="clientHistoryPanel" class="subpanel hidden"></div>
-      </div>
-    </section>
+  <!-- Loading overlay -->
+  <div id="appLoadingOverlay" class="app-loading-overlay" aria-live="polite">
+    <div class="spinner"></div>
+    <p>Cargando panel...</p>
+  </div>
 
-    <section id="sectionSales" class="grid two-columns-equal">
-      <div class="card sticky-card">
-        <div class="card-head">
-          <h3>Venta</h3>
-          <span class="muted">Registrar o editar ventas</span>
-        </div>
-        <form id="saleForm" class="stack-form">
-          <input type="hidden" id="saleId" />
-          <div class="grid two">
-            <select id="saleBranch" required></select>
-            <select id="saleClient" required></select>
-            <select id="saleVehicle" required></select>
-            <select id="saleSeller"></select>
-            <input id="saleDate" type="datetime-local" />
-            <input id="salePrice" type="number" min="0" step="0.01" placeholder="Precio de venta" required />
-            <input id="saleCost" type="number" min="0" step="0.01" placeholder="Costo" />
-            <input id="salePaymentMethod" placeholder="Método de pago" />
-          </div>
-          <textarea id="saleNotes" placeholder="Notas"></textarea>
-          <div class="form-actions">
-            <button class="btn primary" type="submit">Guardar venta</button>
-            <button class="btn secondary" type="button" id="resetSaleBtn">Limpiar</button>
-          </div>
-          <div id="saleFormStatus" class="status-line"></div>
-        </form>
+  <!-- Custom confirm dialog -->
+  <div id="confirmModal" class="admin-modal-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirmModalText">
+    <div class="admin-modal-panel confirm-panel">
+      <p id="confirmModalText" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirmCancelBtn" class="btn secondary">Cancelar</button>
+        <button id="confirmOkBtn" class="btn danger">Confirmar</button>
       </div>
+    </div>
+  </div>
 
-      <div class="card">
-        <div class="card-head space-between">
-          <div>
-            <h3>Ventas</h3>
-            <span class="muted">Listado y comprobantes</span>
-          </div>
-          <div class="toolbar">
-            <button id="refreshSalesBtn" class="btn secondary">Actualizar</button>
-          </div>
-        </div>
-        <div id="saleList" class="list-grid"></div>
-      </div>
-    </section>
-
-    <section id="sectionSettings" class="grid two-columns-equal">
-      <div class="card sticky-card">
-        <div class="card-head">
-          <h3>Configuración general</h3>
-          <span class="muted">Datos del dealer y pie de documentos.</span>
-        </div>
-        <form id="settingsForm" class="stack-form">
-          <input id="settingsBusinessName" placeholder="Nombre del negocio" required />
-          <input id="settingsLogoPath" placeholder="Logo URL o ruta" />
-          <div class="grid two">
-            <input id="settingsContactEmail" type="email" placeholder="Email de contacto" />
-            <input id="settingsContactPhone" placeholder="Teléfono" />
-            <input id="settingsWhatsapp" placeholder="WhatsApp" />
-            <input id="settingsWebsite" placeholder="Sitio web" />
-            <input id="settingsFacebook" placeholder="Facebook" />
-            <input id="settingsInstagram" placeholder="Instagram" />
-          </div>
-          <textarea id="settingsAddress" placeholder="Dirección"></textarea>
-          <textarea id="settingsTerms" placeholder="Términos y condiciones"></textarea>
-          <textarea id="settingsPrivacy" placeholder="Política de privacidad"></textarea>
-          <div class="form-actions">
-            <button class="btn primary" type="submit">Guardar configuración</button>
-          </div>
-          <div id="settingsFormStatus" class="status-line"></div>
-        </form>
-      </div>
-    </section>
-  </main>
+  <div id="toastContainer"></div>
 
   <script src="../api.js"></script>
   <script src="admin.js"></script>

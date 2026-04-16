@@ -28,7 +28,7 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE t.typname = 'audit_action' AND n.nspname = 'redline') THEN
-        CREATE TYPE redline.audit_action AS ENUM ('create', 'update', 'delete', 'login', 'logout', 'status_change', 'sale');
+        CREATE TYPE redline.audit_action AS ENUM ('create', 'update', 'delete', 'login', 'login_failed', 'logout', 'status_change', 'sale');
     END IF;
 END $$;
 
@@ -166,6 +166,87 @@ CREATE TABLE IF NOT EXISTS redline.vehicle_status_history (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS redline.vehicle_brands (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code varchar(50) NOT NULL UNIQUE,
+    name varchar(150) NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_brands_active_sort ON redline.vehicle_brands(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS redline.vehicle_models_catalog (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    brand_id uuid NOT NULL REFERENCES redline.vehicle_brands(id) ON DELETE CASCADE,
+    code varchar(50) NOT NULL,
+    name varchar(150) NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
+    default_vehicle_type varchar(50),
+    default_transmission varchar(50),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT uq_vehicle_models_catalog_brand_code UNIQUE (brand_id, code)
+);
+
+-- Idempotent: add hint columns on existing installations
+ALTER TABLE redline.vehicle_models_catalog
+    ADD COLUMN IF NOT EXISTS default_vehicle_type varchar(50),
+    ADD COLUMN IF NOT EXISTS default_transmission varchar(50);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_models_catalog_brand_active_sort ON redline.vehicle_models_catalog(brand_id, is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS redline.vehicle_types_catalog (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code varchar(50) NOT NULL UNIQUE,
+    name varchar(150) NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_types_catalog_active_sort ON redline.vehicle_types_catalog(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS redline.fuel_types_catalog (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code varchar(50) NOT NULL UNIQUE,
+    name varchar(150) NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fuel_types_catalog_active_sort ON redline.fuel_types_catalog(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS redline.transmissions_catalog (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code varchar(50) NOT NULL UNIQUE,
+    name varchar(150) NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_transmissions_catalog_active_sort ON redline.transmissions_catalog(is_active, sort_order);
+
+CREATE TABLE IF NOT EXISTS redline.vehicle_colors_catalog (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code varchar(50) NOT NULL UNIQUE,
+    name varchar(150) NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_colors_catalog_active_sort ON redline.vehicle_colors_catalog(is_active, sort_order);
+
 CREATE TABLE IF NOT EXISTS redline.clients (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name varchar(180) NOT NULL,
@@ -201,6 +282,25 @@ CREATE TABLE IF NOT EXISTS redline.client_preferences (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS redline.client_images (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id uuid NOT NULL REFERENCES redline.clients(id) ON DELETE CASCADE,
+    file_path text NOT NULL,
+    sort_order integer NOT NULL DEFAULT 0,
+    is_cover boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_images_client ON redline.client_images(client_id);
+
+-- Back-reference columns that depend on clients existing first
+ALTER TABLE redline.vehicles
+    ADD COLUMN IF NOT EXISTS reserved_client_id uuid REFERENCES redline.clients(id);
+
+ALTER TABLE redline.vehicle_status_history
+    ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES redline.clients(id);
 
 CREATE TABLE IF NOT EXISTS redline.sales (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -263,10 +363,24 @@ DROP TRIGGER IF EXISTS trg_vehicle_images_updated_at ON redline.vehicle_images;
 CREATE TRIGGER trg_vehicle_images_updated_at BEFORE UPDATE ON redline.vehicle_images FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_vehicle_status_history_updated_at ON redline.vehicle_status_history;
 CREATE TRIGGER trg_vehicle_status_history_updated_at BEFORE UPDATE ON redline.vehicle_status_history FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_vehicle_brands_updated_at ON redline.vehicle_brands;
+CREATE TRIGGER trg_vehicle_brands_updated_at BEFORE UPDATE ON redline.vehicle_brands FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_vehicle_models_catalog_updated_at ON redline.vehicle_models_catalog;
+CREATE TRIGGER trg_vehicle_models_catalog_updated_at BEFORE UPDATE ON redline.vehicle_models_catalog FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_vehicle_types_catalog_updated_at ON redline.vehicle_types_catalog;
+CREATE TRIGGER trg_vehicle_types_catalog_updated_at BEFORE UPDATE ON redline.vehicle_types_catalog FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_fuel_types_catalog_updated_at ON redline.fuel_types_catalog;
+CREATE TRIGGER trg_fuel_types_catalog_updated_at BEFORE UPDATE ON redline.fuel_types_catalog FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_transmissions_catalog_updated_at ON redline.transmissions_catalog;
+CREATE TRIGGER trg_transmissions_catalog_updated_at BEFORE UPDATE ON redline.transmissions_catalog FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_vehicle_colors_catalog_updated_at ON redline.vehicle_colors_catalog;
+CREATE TRIGGER trg_vehicle_colors_catalog_updated_at BEFORE UPDATE ON redline.vehicle_colors_catalog FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_clients_updated_at ON redline.clients;
 CREATE TRIGGER trg_clients_updated_at BEFORE UPDATE ON redline.clients FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_client_preferences_updated_at ON redline.client_preferences;
 CREATE TRIGGER trg_client_preferences_updated_at BEFORE UPDATE ON redline.client_preferences FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
+DROP TRIGGER IF EXISTS trg_client_images_updated_at ON redline.client_images;
+CREATE TRIGGER trg_client_images_updated_at BEFORE UPDATE ON redline.client_images FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_sales_updated_at ON redline.sales;
 CREATE TRIGGER trg_sales_updated_at BEFORE UPDATE ON redline.sales FOR EACH ROW EXECUTE FUNCTION redline.set_updated_at();
 DROP TRIGGER IF EXISTS trg_documents_updated_at ON redline.documents;

@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -13,6 +13,7 @@ from app.models.enums import AuditAction
 from app.models.role import Role
 from app.models.user import User, UserBranchAccess
 from app.models.branch import Branch
+from app.models.sale import Sale
 from app.schemas.user import (
     UserBranchesUpdate,
     UserCreate,
@@ -95,7 +96,12 @@ def create_user(
         status=payload.status,
     )
     db.add(user)
-    db.flush()
+
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Email duplicado o datos inválidos") from exc
 
     for branch_id in payload.branch_ids:
         db.add(UserBranchAccess(user_id=user.id, branch_id=branch_id))
@@ -249,3 +255,56 @@ def replace_user_branches(
     db.commit()
     updated = _load_user(db, user.id)
     return _to_response(updated)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_permissions("users.write"))],
+) -> None:
+    user = _load_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # No permitir auto-eliminarse
+    if user.id == current_user.id:
+        raise HTTPException(status_code=403, detail="No puedes eliminar tu propio usuario")
+
+    # No permitir eliminar admin principal (primer admin creado)
+    if user.role and user.role.code == "admin":
+        first_admin_id = db.scalar(
+            select(User.id)
+            .join(Role)
+            .where(Role.code == "admin")
+            .order_by(User.created_at.asc())
+            .limit(1)
+        )
+        if user.id == first_admin_id:
+            raise HTTPException(
+                status_code=403, detail="No se puede eliminar el administrador principal"
+            )
+
+    # Validar que no haya ventas registradas por este usuario
+    sale_count = db.scalar(select(func.count(Sale.id)).where(Sale.seller_user_id == user_id))
+    if sale_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"No se puede eliminar el usuario: tiene {sale_count} venta(s) registrada(s)",
+        )
+
+    add_audit_log(
+        db,
+        action=AuditAction.DELETE,
+        entity_type="users",
+        entity_id=user_id,
+        user_id=current_user.id,
+        old_data={"email": user.email, "full_name": user.full_name},
+    )
+
+    # Eliminar acceso a sucursales
+    db.query(UserBranchAccess).filter(UserBranchAccess.user_id == user_id).delete()
+
+    # Eliminar usuario
+    db.delete(user)
+    db.commit()

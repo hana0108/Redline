@@ -7,9 +7,40 @@ from app.models.branch import Branch
 from app.models.client import Client
 from app.models.role import Permission
 from app.models.sale import Sale
+from app.models.user import User
 from app.models.vehicle import Vehicle
+from app.services.cache_service import cache_service
 
 
+class ReportService:
+    """Service for generating reports with caching support"""
+
+    async def get_dashboard_data(self) -> dict[str, int]:
+        """Get dashboard summary data with caching"""
+        return await cache_service.get_dashboard_data()
+
+    async def get_inventory_summary(self) -> list[dict[str, object]]:
+        """Get inventory summary with caching"""
+        return await cache_service.get_inventory_summary()
+
+    async def get_sales_summary(self) -> list[dict[str, object]]:
+        """Get sales summary with caching"""
+        return await cache_service.get_sales_summary()
+
+    async def get_inventory_rows(self) -> list[dict[str, object]]:
+        """Get inventory rows for export with caching"""
+        return await cache_service.get_inventory_rows()
+
+    async def get_sales_rows(self) -> list[dict[str, object]]:
+        """Get sales rows for export with caching"""
+        return await cache_service.get_sales_rows()
+
+
+# Global report service instance
+report_service = ReportService()
+
+
+# Legacy functions for backward compatibility (now use cache)
 def build_dashboard_payload(db: Session) -> dict[str, int]:
     vehicles_total = db.scalar(select(func.count()).select_from(Vehicle)) or 0
     branches_total = db.scalar(select(func.count()).select_from(Branch)) or 0
@@ -28,9 +59,17 @@ def build_dashboard_payload(db: Session) -> dict[str, int]:
 
 def build_inventory_summary(db: Session) -> list[dict[str, object]]:
     rows = db.execute(
-        select(Vehicle.status, func.count(Vehicle.id).label("total")).group_by(Vehicle.status).order_by(Vehicle.status)
+        select(Vehicle.status, func.count(Vehicle.id).label("total"))
+        .group_by(Vehicle.status)
+        .order_by(Vehicle.status)
     ).all()
-    return [{"status": row.status.value if hasattr(row.status, "value") else str(row.status), "total": int(row.total)} for row in rows]
+    return [
+        {
+            "status": row.status.value if hasattr(row.status, "value") else str(row.status),
+            "total": int(row.total),
+        }
+        for row in rows
+    ]
 
 
 def build_sales_summary(db: Session) -> list[dict[str, object]]:
@@ -46,7 +85,11 @@ def build_sales_summary(db: Session) -> list[dict[str, object]]:
         .order_by(Branch.name)
     ).all()
     return [
-        {"branch_name": row.branch_name or "Sin sucursal", "sales_count": int(row.sales_count), "sales_amount": float(row.sales_amount or 0)}
+        {
+            "branch_name": row.branch_name or "Sin sucursal",
+            "sales_count": int(row.sales_count),
+            "sales_amount": float(row.sales_amount or 0),
+        }
         for row in rows
     ]
 
@@ -79,7 +122,7 @@ def get_inventory_rows(db: Session) -> list[dict[str, object]]:
             "brand": row.brand,
             "model": row.model,
             "vehicle_year": row.vehicle_year,
-            "price": float(row.price or 0),
+            "price": float(row.price),
             "mileage": row.mileage,
             "vin": row.vin,
             "plate": row.plate,
@@ -88,7 +131,7 @@ def get_inventory_rows(db: Session) -> list[dict[str, object]]:
             "fuel_type": row.fuel_type,
             "vehicle_type": row.vehicle_type,
             "status": row.status.value if hasattr(row.status, "value") else str(row.status),
-            "branch_name": row.branch_name or "Sin sucursal",
+            "branch_name": row.branch_name,
         }
         for row in rows
     ]
@@ -122,7 +165,11 @@ def get_sales_rows(db: Session) -> list[dict[str, object]]:
             "payment_method": row.payment_method,
             "status": row.status.value if hasattr(row.status, "value") else str(row.status),
             "client_name": row.client_name or "Sin cliente",
-            "vehicle": " ".join(str(part) for part in [row.vehicle_brand, row.vehicle_model, row.vehicle_year] if part),
+            "vehicle": " ".join(
+                str(part)
+                for part in [row.vehicle_brand, row.vehicle_model, row.vehicle_year]
+                if part
+            ),
             "branch_name": row.branch_name or "Sin sucursal",
         }
         for row in rows

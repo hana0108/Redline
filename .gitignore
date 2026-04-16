@@ -1,2 +1,126 @@
+# =========================
+# OS / editor
+# =========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# =========================
+# Python
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+**[.]venv/
+**[.]deps
+**[.]env/
+**[.]ENV/
+.venv/
+venv/
+env/
+ENV/
+.deps/
+backend/.deps/
+
+# Herramientas Python
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.tox/
+.nox/
+.hypothesis/
+.ipynb_checkpoints/
+.cache/
+.eslintcache
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Logs
+*.log
+*.pid
+*.pid.lock
+
+# =========================
+# FastAPI / backend local
+# =========================
+# Archivos de entorno (nunca versionar secretos)
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# SQLite / archivos locales de DB
+*.sqlite3
+*.db
+
+# Archivos temporales / uploads / exports
+tmp/
+temp/
+uploads/
+exports/
+media/
+backend/media/
+
+# =========================
+# Alembic / cache
+# =========================
+backend/alembic/__pycache__/
+backend/app/**/__pycache__/
+
+# =========================
+# Node / frontend
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build frontend
+frontend/dist/
+frontend/build/
+frontend/.cache/
+
+# Variables de entorno frontend
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# =========================
+# Archivos generados
+# =========================
+*.pdf
+*.xlsx
+*.csv
+*.tmp
+*.bak
+
+# =========================
+# Tests / coverage
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# Git / misc
+# =========================
+*.orig

@@ -65,6 +65,16 @@ PERMISSIONS: list[dict[str, str]] = [
         "name": "Gestionar configuración",
         "description": "Permite editar configuración",
     },
+    {
+        "code": "documents.read",
+        "name": "Ver documentos",
+        "description": "Permite consultar documentos",
+    },
+    {
+        "code": "documents.write",
+        "name": "Gestionar documentos",
+        "description": "Permite subir y gestionar documentos",
+    },
 ]
 
 ROLE_DEFINITIONS: list[dict[str, object]] = [
