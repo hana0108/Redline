@@ -21,27 +21,27 @@
         <button class="nav-item active" data-page="dashboard">
           <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
         </button>
-        <button class="nav-item" data-page="branches">
+        <button class="nav-item" data-page="branches" data-requires="branches.read">
           <span class="nav-icon">🏢</span><span class="nav-label">Sucursales</span>
         </button>
-        <button class="nav-item" data-page="inventory">
+        <button class="nav-item" data-page="inventory" data-requires="vehicles.read">
           <span class="nav-icon">🚗</span><span class="nav-label">Inventario</span>
         </button>
-        <button class="nav-item" data-page="clients">
+        <button class="nav-item" data-page="clients" data-requires="clients.read">
           <span class="nav-icon">👥</span><span class="nav-label">Clientes</span>
         </button>
-        <button class="nav-item" data-page="sales">
+        <button class="nav-item" data-page="sales" data-requires="sales.read">
           <span class="nav-icon">💰</span><span class="nav-label">Ventas</span>
         </button>
         <div class="nav-divider"></div>
-        <button class="nav-item" data-page="users">
+        <button class="nav-item" data-page="users" data-requires="users.read">
           <span class="nav-icon">🔐</span><span class="nav-label">Usuarios</span>
         </button>
-        <button class="nav-item" data-page="roles">
+        <button class="nav-item" data-page="roles" data-requires="roles.read">
           <span class="nav-icon">🛡️</span><span class="nav-label">Roles</span>
         </button>
         <div class="nav-divider"></div>
-        <button class="nav-item" data-page="settings">
+        <button class="nav-item" data-page="settings" data-requires="settings.read">
           <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
         </button>
       </nav>

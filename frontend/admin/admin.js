@@ -306,6 +306,29 @@ async function loadCurrentUser() {
   setText('welcomeText', `${me.full_name} · ${me.role} · ${me.email}`);
 }
 
+function hasPermission(code) {
+  return Array.isArray(CURRENT_USER?.permissions) && CURRENT_USER.permissions.includes(code);
+}
+
+function applyNavPermissions() {
+  document.querySelectorAll('.nav-item[data-requires]').forEach(btn => {
+    btn.classList.toggle('hidden', !hasPermission(btn.dataset.requires));
+  });
+  // Hide a divider when all nav items immediately following it (before the next divider) are hidden
+  document.querySelectorAll('#sidebarNav .nav-divider').forEach(divider => {
+    let sibling = divider.nextElementSibling;
+    let allHidden = true;
+    while (sibling && !sibling.classList.contains('nav-divider')) {
+      if (sibling.classList.contains('nav-item') && !sibling.classList.contains('hidden')) {
+        allHidden = false;
+        break;
+      }
+      sibling = sibling.nextElementSibling;
+    }
+    divider.classList.toggle('hidden', allHidden);
+  });
+}
+
 async function loadUsers() {
   try {
     USERS = await window.REDLINE.request('/users');
@@ -478,7 +501,12 @@ function renderRoles() {
 }
 
 async function loadBranches() {
-  BRANCHES = await window.REDLINE.request('/branches');
+  try {
+    BRANCHES = await window.REDLINE.request('/branches');
+  } catch (error) {
+    if (error.status !== 403) throw error;
+    BRANCHES = [];
+  }
   setText('metricBranches', String(BRANCHES.length));
 
   el('branchList').innerHTML = BRANCHES.length
@@ -626,7 +654,12 @@ function renderSalesHistory() {
 }
 
 async function loadVehicles() {
-  VEHICLES = await window.REDLINE.request('/vehicles');
+  try {
+    VEHICLES = await window.REDLINE.request('/vehicles');
+  } catch (error) {
+    if (error.status !== 403) throw error;
+    VEHICLES = [];
+  }
   renderVehicles();
   renderReserved();
   syncSharedSelects();
@@ -761,7 +794,12 @@ function renderClients() {
 async function loadClients() {
   const search = el('clientSearch')?.value.trim();
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
-  CLIENTS = await window.REDLINE.request(`/clients${query}`);
+  try {
+    CLIENTS = await window.REDLINE.request(`/clients${query}`);
+  } catch (error) {
+    if (error.status !== 403) throw error;
+    CLIENTS = [];
+  }
   renderClients();
   syncSharedSelects();
 }
@@ -874,7 +912,12 @@ function renderSales() {
 }
 
 async function loadSales() {
-  SALES = await window.REDLINE.request('/sales');
+  try {
+    SALES = await window.REDLINE.request('/sales');
+  } catch (error) {
+    if (error.status !== 403) throw error;
+    SALES = [];
+  }
   renderSales();
 }
 
@@ -918,8 +961,12 @@ function fillSettingsForm(settings) {
 }
 
 async function loadSettings() {
-  const settings = await window.REDLINE.request('/settings');
-  fillSettingsForm(settings);
+  try {
+    const settings = await window.REDLINE.request('/settings');
+    fillSettingsForm(settings);
+  } catch (error) {
+    if (error.status !== 403) throw error;
+  }
 }
 
 async function refreshImages() {
@@ -1548,6 +1595,7 @@ async function bootstrap() {
   const overlay = el('appLoadingOverlay');
   try {
     await loadCurrentUser();
+    applyNavPermissions();
     await Promise.all([loadCatalogs(), loadRoles()]);
     await Promise.all([loadUsers(), loadBranches()]);
     await Promise.all([loadVehicles(), loadClients()]);
@@ -1560,7 +1608,7 @@ async function bootstrap() {
     resetUserForm();
     navigateTo('dashboard');
   } catch (error) {
-    if (error.status === 401 || error.status === 403) {
+    if (error.status === 401) {
       window.REDLINE.clearToken();
       window.location.href = '../login/index.html';
       return;
