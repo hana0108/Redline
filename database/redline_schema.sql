@@ -334,7 +334,7 @@ CREATE TABLE IF NOT EXISTS redline.documents (
 
 CREATE TABLE IF NOT EXISTS redline.audit_logs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id uuid REFERENCES redline.users(id),
+    user_id uuid REFERENCES redline.users(id) ON DELETE SET NULL,
     action redline.audit_action NOT NULL,
     entity_type varchar(50) NOT NULL,
     entity_id uuid,

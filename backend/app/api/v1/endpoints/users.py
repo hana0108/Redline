@@ -308,6 +308,11 @@ def delete_user(
     # Eliminar acceso a sucursales
     db.query(UserBranchAccess).filter(UserBranchAccess.user_id == user_id).delete()
 
+    # Desligar audit_logs (la FK no tiene ON DELETE SET NULL en BD antigua; lo hacemos explícito)
+    from app.models.audit import AuditLog
+
+    db.query(AuditLog).filter(AuditLog.user_id == user_id).update({"user_id": None})
+
     # Eliminar usuario
     db.delete(user)
     db.commit()
