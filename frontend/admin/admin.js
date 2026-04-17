@@ -556,7 +556,12 @@ async function loadBranches() {
     BRANCHES = await window.REDLINE.request('/branches');
   } catch (error) {
     if (error.status !== 403) throw error;
-    BRANCHES = [];
+    // Vendors lack branches.read — fall back to public endpoint for branch names
+    try {
+      BRANCHES = await window.REDLINE.request('/branches/public');
+    } catch (_) {
+      BRANCHES = [];
+    }
   }
   setText('metricBranches', String(BRANCHES.length));
 
