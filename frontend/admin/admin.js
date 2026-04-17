@@ -1305,6 +1305,7 @@ async function handleMainClick(evt) {
       if (!await askConfirmation('¿Eliminar esta sucursal? Solo es posible si no tiene vehículos ni ventas asociadas.')) return;
       await window.REDLINE.request(`/branches/${id}`, { method: 'DELETE' });
       await loadBranches();
+      await loadUsers(); // refresca asignaciones: la FK cascade ya eliminó los accesos en BD
       return;
     }
     if (action === 'edit-vehicle') {

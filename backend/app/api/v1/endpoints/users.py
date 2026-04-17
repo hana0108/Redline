@@ -238,9 +238,10 @@ def replace_user_branches(
     _validate_role_and_branches(db, user.role_id, payload.branch_ids)
     old_branch_ids = [str(link.branch_id) for link in user.branch_links]
 
-    db.query(UserBranchAccess).filter(UserBranchAccess.user_id == user.id).delete()
+    # Use ORM relationship to avoid synchronize_session issues with delete-orphan cascade
+    user.branch_links.clear()
     for branch_id in payload.branch_ids:
-        db.add(UserBranchAccess(user_id=user.id, branch_id=branch_id))
+        user.branch_links.append(UserBranchAccess(user_id=user.id, branch_id=branch_id))
 
     add_audit_log(
         db,
