@@ -2,7 +2,7 @@
 
 Proyecto refactorizado al alcance actual del dealer, con **backend, frontend admin y esquema PostgreSQL sincronizados**.
 
-# Video
+# Video (acceso: [Redline](red.elrealplatano.com))
 
 [![Video](https://img.youtube.com/vi/3U6OFTzFbyo/0.jpg)](https://youtu.be/3U6OFTzFbyo)
 
