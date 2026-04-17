@@ -16,8 +16,12 @@ class AuditLog(Base, TimestampMixin):
     __tablename__ = "audit_logs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    action: Mapped[AuditAction] = mapped_column(pg_enum(AuditAction, "audit_action"), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    action: Mapped[AuditAction] = mapped_column(
+        pg_enum(AuditAction, "audit_action"), nullable=False
+    )
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     old_data: Mapped[dict | None] = mapped_column(JSON)

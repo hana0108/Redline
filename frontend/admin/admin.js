@@ -556,7 +556,12 @@ async function loadBranches() {
     BRANCHES = await window.REDLINE.request('/branches');
   } catch (error) {
     if (error.status !== 403) throw error;
-    BRANCHES = [];
+    // Vendors lack branches.read — fall back to public endpoint for branch names
+    try {
+      BRANCHES = await window.REDLINE.request('/branches/public');
+    } catch (_) {
+      BRANCHES = [];
+    }
   }
   setText('metricBranches', String(BRANCHES.length));
 
@@ -1305,6 +1310,7 @@ async function handleMainClick(evt) {
       if (!await askConfirmation('¿Eliminar esta sucursal? Solo es posible si no tiene vehículos ni ventas asociadas.')) return;
       await window.REDLINE.request(`/branches/${id}`, { method: 'DELETE' });
       await loadBranches();
+      await loadUsers(); // refresca asignaciones: la FK cascade ya eliminó los accesos en BD
       return;
     }
     if (action === 'edit-vehicle') {

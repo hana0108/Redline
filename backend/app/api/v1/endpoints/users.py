@@ -238,9 +238,12 @@ def replace_user_branches(
     _validate_role_and_branches(db, user.role_id, payload.branch_ids)
     old_branch_ids = [str(link.branch_id) for link in user.branch_links]
 
-    db.query(UserBranchAccess).filter(UserBranchAccess.user_id == user.id).delete()
+    # Clear existing links and flush so DELETEs reach the DB before the INSERTs,
+    # avoiding unique constraint violations on uq_user_branch_access.
+    user.branch_links.clear()
+    db.flush()
     for branch_id in payload.branch_ids:
-        db.add(UserBranchAccess(user_id=user.id, branch_id=branch_id))
+        user.branch_links.append(UserBranchAccess(user_id=user.id, branch_id=branch_id))
 
     add_audit_log(
         db,
@@ -304,6 +307,11 @@ def delete_user(
 
     # Eliminar acceso a sucursales
     db.query(UserBranchAccess).filter(UserBranchAccess.user_id == user_id).delete()
+
+    # Desligar audit_logs (la FK no tiene ON DELETE SET NULL en BD antigua; lo hacemos explícito)
+    from app.models.audit import AuditLog
+
+    db.query(AuditLog).filter(AuditLog.user_id == user_id).update({"user_id": None})
 
     # Eliminar usuario
     db.delete(user)
