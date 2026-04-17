@@ -238,8 +238,10 @@ def replace_user_branches(
     _validate_role_and_branches(db, user.role_id, payload.branch_ids)
     old_branch_ids = [str(link.branch_id) for link in user.branch_links]
 
-    # Use ORM relationship to avoid synchronize_session issues with delete-orphan cascade
+    # Clear existing links and flush so DELETEs reach the DB before the INSERTs,
+    # avoiding unique constraint violations on uq_user_branch_access.
     user.branch_links.clear()
+    db.flush()
     for branch_id in payload.branch_ids:
         user.branch_links.append(UserBranchAccess(user_id=user.id, branch_id=branch_id))
 
