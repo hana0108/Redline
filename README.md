@@ -2,6 +2,10 @@
 
 Proyecto refactorizado al alcance actual del dealer, con **backend, frontend admin y esquema PostgreSQL sincronizados**.
 
+# Video
+
+[![Video](https://img.youtube.com/vi/3U6OFTzFbyo/0.jpg)](https://youtu.be/3U6OFTzFbyo)
+
 ## Alcance activo
 - sucursales
 - usuarios, roles y permisos
